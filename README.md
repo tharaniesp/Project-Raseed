@@ -8,8 +8,8 @@ An intelligent receipt management system that uses AI to extract data from recei
 **Project Raseed** is built incrementally across 5 steps:
 
 - ✅ **Step 1**: Receipt Upload + Firebase Storage (COMPLETE)
-- 🔄 **Step 2**: Gemini Vision AI Integration (Next)
-- 🔄 **Step 3**: Google Wallet Pass Generation
+- ✅ **Step 2**: Gemini Vision AI Integration (COMPLETE)
+- 🔄 **Step 3**: Google Wallet Pass Generation (Next)
 - 🔄 **Step 4**: Natural Language Query System
 - 🔄 **Step 5**: Insights & Push Notifications
 

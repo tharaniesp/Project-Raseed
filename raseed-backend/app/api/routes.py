@@ -61,15 +61,88 @@ async def get_receipt(receipt_id: str):
     
     return receipt
 
-# Future routes for Step 2 and beyond
+# Step 2: AI Processing Routes
 @receipt_router.post("/receipts/{receipt_id}/process")
 async def process_receipt(receipt_id: str):
-    """Process receipt with Gemini Vision (Step 2)"""
-    # TODO: Implement in Step 2
+    """Process receipt with Gemini Vision AI to extract structured data"""
+    from app.services.ai_service import ai_service
+    from app.models.receipt import ReceiptUpdate, ReceiptStatus
+    
+    # Get receipt details
+    receipt = await ReceiptService.get_receipt_by_id(receipt_id)
+    if not receipt:
+        raise HTTPException(status_code=404, detail="Receipt not found")
+    
+    # Check if AI service is available
+    if not ai_service.is_available():
+        raise HTTPException(
+            status_code=503, 
+            detail="AI service not available. Please check GEMINI_API_KEY configuration."
+        )
+    
+    # Update status to processing
+    update_data = ReceiptUpdate(status=ReceiptStatus.PROCESSING)
+    await ReceiptService.update_receipt(receipt_id, update_data)
+    
+    try:
+        # Extract data using Gemini Vision
+        extracted_data = await ai_service.extract_receipt_data(receipt.download_url)
+        
+        if extracted_data:
+            # Update receipt with extracted data
+            update_data = ReceiptUpdate(
+                extracted_data=extracted_data,
+                status=ReceiptStatus.PROCESSED
+            )
+            success = await ReceiptService.update_receipt(receipt_id, update_data)
+            
+            if success:
+                return {
+                    "success": True,
+                    "message": "Receipt processed successfully",
+                    "receipt_id": receipt_id,
+                    "extracted_data": extracted_data.dict(),
+                    "confidence_score": extracted_data.confidence_score
+                }
+            else:
+                raise HTTPException(status_code=500, detail="Failed to save extracted data")
+        else:
+            # Processing failed
+            update_data = ReceiptUpdate(
+                status=ReceiptStatus.ERROR,
+                processing_error="AI extraction failed - could not extract data from image"
+            )
+            await ReceiptService.update_receipt(receipt_id, update_data)
+            
+            raise HTTPException(
+                status_code=422, 
+                detail="Failed to extract data from receipt image. Please ensure the image is clear and contains a valid receipt."
+            )
+            
+    except Exception as e:
+        # Update status to error
+        update_data = ReceiptUpdate(
+            status=ReceiptStatus.ERROR,
+            processing_error=str(e)
+        )
+        await ReceiptService.update_receipt(receipt_id, update_data)
+        
+        raise HTTPException(status_code=500, detail=f"Processing failed: {str(e)}")
+
+@receipt_router.get("/receipts/{receipt_id}/processing-status")
+async def get_processing_status(receipt_id: str):
+    """Get current processing status of a receipt"""
+    receipt = await ReceiptService.get_receipt_by_id(receipt_id)
+    if not receipt:
+        raise HTTPException(status_code=404, detail="Receipt not found")
+    
     return {
-        "message": "Receipt processing will be implemented in Step 2",
         "receipt_id": receipt_id,
-        "status": "pending"
+        "status": receipt.status,
+        "has_extracted_data": receipt.extracted_data is not None,
+        "processing_error": receipt.processing_error,
+        "confidence_score": receipt.extracted_data.confidence_score if receipt.extracted_data else None,
+        "updated_at": receipt.updated_at
     }
 
 @receipt_router.post("/receipts/{receipt_id}/generate-wallet-pass")

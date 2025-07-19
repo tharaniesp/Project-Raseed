@@ -37,9 +37,13 @@ class Settings(BaseSettings):
         "video/mp4", "video/webm", "image/jpg"
     ]
     
-    # AI/ML Configuration (for future steps)
+    # AI/ML Configuration (Step 2)
     GEMINI_API_KEY: str = ""
     OPENAI_API_KEY: str = ""
+    
+    # AI Processing Settings
+    AI_PROCESSING_TIMEOUT: int = 60  # seconds
+    AI_MAX_RETRIES: int = 3
     
     # Database
     FIRESTORE_COLLECTION_RECEIPTS: str = "receipts"

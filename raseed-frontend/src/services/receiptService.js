@@ -51,7 +51,17 @@ export const receiptService = {
   // Health check
   async healthCheck() {
     return ApiService.get('/health');
-  }
+  },
+
+    // Process receipt with AI (Step 2)
+  async processReceipt(receiptId) {
+    return ApiService.post(`/api/receipts/${receiptId}/process`);
+  },
+
+  // Get processing status (Step 2)
+  async getProcessingStatus(receiptId) {
+    return ApiService.get(`/api/receipts/${receiptId}/processing-status`);
+  },
 };
 
 export const uploadReceipt = receiptService.uploadReceipt;

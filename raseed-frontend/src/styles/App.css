@@ -214,6 +214,69 @@
   backdrop-filter: blur(2px);
 }
 
+/* ====================================== */
+/* STEP 2: AI PROCESSING STYLES */
+/* ====================================== */
+
+/* AI Processing Buttons */
+.confidence-score {
+  font-size: 0.7rem;
+  padding: 0.2rem 0.5rem;
+  border-radius: 10px;
+  background: #e0f2fe;
+  color: #0369a1;
+  font-weight: 600;
+  margin-left: 0.5rem;
+}
+
+.process-btn, .retry-btn {
+  background: #3b82f6;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 0.25rem 0.75rem;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-left: 0.5rem;
+}
+
+.process-btn:hover, .retry-btn:hover {
+  background: #2563eb;
+}
+
+.process-btn:disabled, .retry-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Processing Status Styles */
+.processing-notice.success {
+  background: #f0fdf4 !important;
+  border: 1px solid #bbf7d0 !important;
+  color: #166534 !important;
+}
+
+.processing-notice.error {
+  background: #fef2f2 !important;
+  border: 1px solid #fecaca !important;
+  color: #991b1b !important;
+}
+
+.action-btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.action-btn .spinner {
+  animation: spin 1s linear infinite;
+}
+
+/* ====================================== */
+/* END STEP 2 STYLES */
+/* ====================================== */
+
+
 /* Mobile-specific styles for navigation */
 @media (max-width: 768px) {
   .menu-button {

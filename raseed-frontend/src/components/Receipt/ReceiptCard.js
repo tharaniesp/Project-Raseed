@@ -1,9 +1,13 @@
 // src/components/Receipt/ReceiptCard.js
-import React from 'react';
-import { Calendar, DollarSign, MapPin, FileText, Eye, Download } from 'lucide-react';
+import React, { useState } from 'react';
+import { Calendar, DollarSign, MapPin, FileText, Eye, Download, Brain, Loader, CheckCircle, AlertTriangle } from 'lucide-react';
+import { receiptService } from '../../services/receiptService';
 
 const ReceiptCard = ({ receipt }) => {
-  console.log('🎫 ReceiptCard received:', receipt);
+  const [processing, setProcessing] = useState(false);
+  const [localReceipt, setLocalReceipt] = useState(receipt);
+
+  console.log('🎫 ReceiptCard received:', localReceipt);
 
   const formatDate = (dateString) => {
     return new Date(dateString).toLocaleDateString('en-US', {
@@ -30,31 +34,59 @@ const ReceiptCard = ({ receipt }) => {
   };
 
   const handleView = () => {
-    if (receipt.download_url) {
-      window.open(receipt.download_url, '_blank');
+    if (localReceipt.download_url) {
+      window.open(localReceipt.download_url, '_blank');
     }
   };
 
   const handleDownload = () => {
-    if (receipt.download_url) {
+    if (localReceipt.download_url) {
       const link = document.createElement('a');
-      link.href = receipt.download_url;
-      link.download = receipt.file_metadata?.original_filename || 
-                     receipt.file_metadata?.filename || 
+      link.href = localReceipt.download_url;
+      link.download = localReceipt.file_metadata?.original_filename || 
+                     localReceipt.file_metadata?.filename || 
                      'receipt';
       link.click();
     }
   };
 
+  const handleProcessWithAI = async () => {
+    setProcessing(true);
+    try {
+      console.log('🤖 Processing receipt with AI:', localReceipt.id);
+      const result = await receiptService.processReceipt(localReceipt.id);
+      
+      if (result.success) {
+        // Update local state with processed data
+        setLocalReceipt(prev => ({
+          ...prev,
+          status: 'processed',
+          extracted_data: result.extracted_data
+        }));
+        
+        console.log('✅ AI processing successful:', result);
+      }
+    } catch (error) {
+      console.error('❌ AI processing failed:', error);
+      setLocalReceipt(prev => ({
+        ...prev,
+        status: 'error',
+        processing_error: error.message
+      }));
+    } finally {
+      setProcessing(false);
+    }
+  };
+
   // 🔧 FIX: Handle both API response format and local state format
   const getFileName = () => {
-    return receipt.file_metadata?.original_filename || 
-           receipt.file_metadata?.filename || 
+    return localReceipt.file_metadata?.original_filename || 
+           localReceipt.file_metadata?.filename || 
            'Receipt';
   };
 
   const getFileType = () => {
-    return receipt.file_metadata?.content_type?.split('/')[1]?.toUpperCase() || 'FILE';
+    return localReceipt.file_metadata?.content_type?.split('/')[1]?.toUpperCase() || 'FILE';
   };
 
   return (
@@ -63,10 +95,10 @@ const ReceiptCard = ({ receipt }) => {
       <div className="receipt-card-header">
         <div className="receipt-info">
           <h3 className="receipt-title">
-            {receipt.extracted_data?.merchant_name || getFileName()}
+            {localReceipt.extracted_data?.merchant_name || getFileName()}
           </h3>
-          <span className={`status-badge status-${getStatusColor(receipt.status)}`}>
-            {receipt.status}
+          <span className={`status-badge status-${getStatusColor(localReceipt.status)}`}>
+            {localReceipt.status}
           </span>
         </div>
         
@@ -85,18 +117,39 @@ const ReceiptCard = ({ receipt }) => {
           >
             <Download size={16} />
           </button>
+          
+          {/* AI Processing Button - Step 2 */}
+          {localReceipt.status === 'uploaded' && (
+            <button 
+              onClick={handleProcessWithAI}
+              className="action-btn"
+              title="Process with AI"
+              disabled={processing}
+            >
+              {processing ? (
+                <Loader className="spinner" size={16} />
+              ) : (
+                <Brain size={16} />
+              )}
+            </button>
+          )}
         </div>
       </div>
 
       {/* Card Content */}
       <div className="receipt-card-content">
         {/* Amount */}
-        {receipt.extracted_data?.total_amount && (
+        {localReceipt.extracted_data?.total_amount && (
           <div className="receipt-amount">
             <DollarSign size={20} />
             <span className="amount">
-              {formatCurrency(receipt.extracted_data.total_amount)}
+              {formatCurrency(localReceipt.extracted_data.total_amount)}
             </span>
+            {localReceipt.extracted_data.confidence_score && (
+              <span className="confidence-score" title="AI Confidence Score">
+                {Math.round(localReceipt.extracted_data.confidence_score * 100)}%
+              </span>
+            )}
           </div>
         )}
 
@@ -105,14 +158,14 @@ const ReceiptCard = ({ receipt }) => {
           <div className="detail-item">
             <Calendar size={16} />
             <span>
-              {receipt.extracted_data?.receipt_date || formatDate(receipt.created_at)}
+              {localReceipt.extracted_data?.receipt_date || formatDate(localReceipt.created_at)}
             </span>
           </div>
           
-          {receipt.extracted_data?.merchant_address && (
+          {localReceipt.extracted_data?.merchant_address && (
             <div className="detail-item">
               <MapPin size={16} />
-              <span>{receipt.extracted_data.merchant_address}</span>
+              <span>{localReceipt.extracted_data.merchant_address}</span>
             </div>
           )}
           
@@ -121,12 +174,12 @@ const ReceiptCard = ({ receipt }) => {
             <span>{getFileType()}</span>
           </div>
 
-          {/* 🔧 ADD: File size info */}
+          {/* File size info */}
           <div className="detail-item">
             <FileText size={16} />
             <span>
-              {receipt.file_metadata?.file_size ? 
-                `${(receipt.file_metadata.file_size / 1024).toFixed(1)} KB` : 
+              {localReceipt.file_metadata?.file_size ? 
+                `${(localReceipt.file_metadata.file_size / 1024).toFixed(1)} KB` : 
                 'Unknown size'
               }
             </span>
@@ -134,11 +187,11 @@ const ReceiptCard = ({ receipt }) => {
         </div>
 
         {/* Items Preview */}
-        {receipt.extracted_data?.items && receipt.extracted_data.items.length > 0 && (
+        {localReceipt.extracted_data?.items && localReceipt.extracted_data.items.length > 0 && (
           <div className="items-preview">
-            <h4>Items ({receipt.extracted_data.items.length})</h4>
+            <h4>Items ({localReceipt.extracted_data.items.length})</h4>
             <div className="items-list">
-              {receipt.extracted_data.items.slice(0, 3).map((item, index) => (
+              {localReceipt.extracted_data.items.slice(0, 3).map((item, index) => (
                 <div key={index} className="item">
                   <span className="item-name">{item.name}</span>
                   {item.total_price && (
@@ -146,9 +199,9 @@ const ReceiptCard = ({ receipt }) => {
                   )}
                 </div>
               ))}
-              {receipt.extracted_data.items.length > 3 && (
+              {localReceipt.extracted_data.items.length > 3 && (
                 <div className="more-items">
-                  +{receipt.extracted_data.items.length - 3} more items
+                  +{localReceipt.extracted_data.items.length - 3} more items
                 </div>
               )}
             </div>
@@ -156,20 +209,49 @@ const ReceiptCard = ({ receipt }) => {
         )}
 
         {/* Processing Status */}
-        {receipt.status === 'uploaded' && (
+        {localReceipt.status === 'uploaded' && (
           <div className="processing-notice">
-            <span>✨ Ready for AI processing (Step 2)</span>
+            <Brain size={16} />
+            <span>Ready for AI processing</span>
+            <button 
+              onClick={handleProcessWithAI}
+              className="process-btn"
+              disabled={processing}
+            >
+              {processing ? 'Processing...' : 'Extract Data'}
+            </button>
           </div>
         )}
         
-        {receipt.status === 'processing' && (
+        {localReceipt.status === 'processing' && (
           <div className="processing-notice">
-            <div className="spinner small"></div>
-            <span>Extracting data...</span>
+            <Loader className="spinner small" size={16} />
+            <span>AI is extracting data...</span>
           </div>
         )}
 
-        {/* 🔧 ADD: Debug info in development */}
+        {localReceipt.status === 'processed' && (
+          <div className="processing-notice success">
+            <CheckCircle size={16} />
+            <span>✨ Data extracted successfully!</span>
+          </div>
+        )}
+
+        {localReceipt.status === 'error' && (
+          <div className="processing-notice error">
+            <AlertTriangle size={16} />
+            <span>⚠️ Processing failed</span>
+            <button 
+              onClick={handleProcessWithAI}
+              className="retry-btn"
+              disabled={processing}
+            >
+              Retry
+            </button>
+          </div>
+        )}
+
+        {/* Debug info in development */}
         {process.env.NODE_ENV === 'development' && (
           <div style={{ 
             fontSize: '10px', 
@@ -178,9 +260,12 @@ const ReceiptCard = ({ receipt }) => {
             marginTop: '10px',
             borderRadius: '4px'
           }}>
-            <strong>Debug:</strong> ID: {receipt.id}, 
-            Status: {receipt.status}, 
+            <strong>Debug:</strong> ID: {localReceipt.id}, 
+            Status: {localReceipt.status}, 
             File: {getFileName()}
+            {localReceipt.extracted_data && (
+              <span>, Confidence: {Math.round((localReceipt.extracted_data.confidence_score || 0) * 100)}%</span>
+            )}
           </div>
         )}
       </div>

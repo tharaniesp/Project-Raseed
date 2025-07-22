@@ -1,7 +1,12 @@
-// src/components/Receipt/ReceiptCard.js
+// src/components/Receipt/ReceiptCard.js - Complete Update with Auto Wallet Integration
 import React, { useState } from 'react';
-import { Calendar, DollarSign, MapPin, FileText, Eye, Download, Brain, Loader, CheckCircle, AlertTriangle } from 'lucide-react';
+import { 
+  Calendar, DollarSign, MapPin, FileText, Eye, Download, Brain, 
+  Loader, CheckCircle, AlertTriangle, CreditCard, ExternalLink, 
+  Clock, Zap 
+} from 'lucide-react';
 import { receiptService } from '../../services/receiptService';
+import WalletButton from './WalletButton';
 
 const ReceiptCard = ({ receipt }) => {
   const [processing, setProcessing] = useState(false);
@@ -58,12 +63,24 @@ const ReceiptCard = ({ receipt }) => {
       
       if (result.success) {
         // Update local state with processed data
-        setLocalReceipt(prev => ({
-          ...prev,
+        const updatedReceipt = {
+          ...localReceipt,
           status: 'processed',
           extracted_data: result.extracted_data
-        }));
-        
+        };
+
+        // Handle auto-generated wallet pass
+        if (result.wallet_pass) {
+          updatedReceipt.wallet_pass = result.wallet_pass;
+          
+          if (result.wallet_pass.auto_generated) {
+            console.log('🎫✨ Wallet pass auto-generated:', result.wallet_pass);
+          } else {
+            console.log('⚠️ Auto wallet generation failed:', result.wallet_pass.error);
+          }
+        }
+
+        setLocalReceipt(updatedReceipt);
         console.log('✅ AI processing successful:', result);
       }
     } catch (error) {
@@ -75,6 +92,13 @@ const ReceiptCard = ({ receipt }) => {
       }));
     } finally {
       setProcessing(false);
+    }
+  };
+
+  const handleAddToWallet = () => {
+    if (localReceipt.wallet_pass?.save_url) {
+      console.log('🔗 Opening wallet save URL:', localReceipt.wallet_pass.save_url);
+      window.open(localReceipt.wallet_pass.save_url, '_blank', 'noopener,noreferrer');
     }
   };
 
@@ -97,9 +121,18 @@ const ReceiptCard = ({ receipt }) => {
           <h3 className="receipt-title">
             {localReceipt.extracted_data?.merchant_name || getFileName()}
           </h3>
-          <span className={`status-badge status-${getStatusColor(localReceipt.status)}`}>
-            {localReceipt.status}
-          </span>
+          <div className="status-badges">
+            <span className={`status-badge status-${getStatusColor(localReceipt.status)}`}>
+              {localReceipt.status}
+            </span>
+            {/* Auto-generated wallet pass indicator */}
+            {localReceipt.wallet_pass?.auto_generated && (
+              <span className="status-badge status-wallet">
+                <Zap size={12} />
+                Auto Pass
+              </span>
+            )}
+          </div>
         </div>
         
         <div className="receipt-actions">
@@ -251,6 +284,68 @@ const ReceiptCard = ({ receipt }) => {
           </div>
         )}
 
+        {/* STEP 3: Wallet Pass Section */}
+        {localReceipt.status === 'processed' && localReceipt.extracted_data && (
+          <div className="receipt-wallet-section">
+            <div className="wallet-section-header">
+              <CreditCard size={16} />
+              <span>Google Wallet Pass</span>
+              <span className="step-badge">Step 3</span>
+            </div>
+            
+            {/* Auto-Generated Wallet Pass */}
+            {localReceipt.wallet_pass?.auto_generated ? (
+              <div className="wallet-auto-generated">
+                <div className="auto-generation-notice">
+                  <Zap size={16} />
+                  <span>✨ Wallet pass auto-generated!</span>
+                  <span className="auto-timestamp">
+                    <Clock size={12} />
+                    {localReceipt.wallet_pass.generation_timestamp ? 
+                      new Date(localReceipt.wallet_pass.generation_timestamp).toLocaleTimeString() : 
+                      'Just now'
+                    }
+                  </span>
+                </div>
+                
+                <button 
+                  onClick={handleAddToWallet}
+                  className="wallet-btn success auto-generated"
+                >
+                  <CheckCircle size={16} />
+                  <span>Add to Google Wallet</span>
+                  <ExternalLink size={14} />
+                </button>
+                
+                <div className="wallet-info">
+                  <p>Pass created automatically after AI processing</p>
+                  <small>Object ID: {localReceipt.wallet_pass.wallet_object_id}</small>
+                </div>
+              </div>
+            ) : localReceipt.wallet_pass?.error ? (
+              /* Auto-generation failed, show manual option */
+              <div className="wallet-auto-failed">
+                <div className="auto-generation-error">
+                  <AlertTriangle size={16} />
+                  <span>Auto-generation failed: {localReceipt.wallet_pass.error}</span>
+                </div>
+                
+                {localReceipt.wallet_pass.manual_creation_available && (
+                  <div className="manual-fallback">
+                    <p>You can still create a wallet pass manually:</p>
+                    <WalletButton receipt={localReceipt} />
+                  </div>
+                )}
+              </div>
+            ) : (
+              /* No auto-generation attempted, show manual creation */
+              <div className="wallet-manual-creation">
+                <WalletButton receipt={localReceipt} />
+              </div>
+            )}
+          </div>
+        )}
+
         {/* Debug info in development */}
         {process.env.NODE_ENV === 'development' && (
           <div style={{ 
@@ -265,6 +360,9 @@ const ReceiptCard = ({ receipt }) => {
             File: {getFileName()}
             {localReceipt.extracted_data && (
               <span>, Confidence: {Math.round((localReceipt.extracted_data.confidence_score || 0) * 100)}%</span>
+            )}
+            {localReceipt.wallet_pass && (
+              <span>, Wallet: {localReceipt.wallet_pass.auto_generated ? 'Auto' : 'Manual'}</span>
             )}
           </div>
         )}

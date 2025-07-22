@@ -45,6 +45,10 @@ class Settings(BaseSettings):
     AI_PROCESSING_TIMEOUT: int = 60  # seconds
     AI_MAX_RETRIES: int = 3
     
+    # Google Wallet Configuration (Step 3)
+    GOOGLE_WALLET_ISSUER_ID: str = ""
+    AUTO_GENERATE_WALLET_PASS: bool = True 
+    
     # Database
     FIRESTORE_COLLECTION_RECEIPTS: str = "receipts"
     FIRESTORE_COLLECTION_USERS: str = "users"

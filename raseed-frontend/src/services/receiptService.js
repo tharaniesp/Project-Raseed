@@ -1,4 +1,3 @@
-
 // src/services/receiptService.js
 import ApiService from './api';
 
@@ -33,14 +32,37 @@ export const receiptService = {
     return ApiService.get(`/api/receipts/${receiptId}`);
   },
 
-  // Process receipt (Step 2)
+  // Process receipt with AI (Step 2)
   async processReceipt(receiptId) {
     return ApiService.post(`/api/receipts/${receiptId}/process`);
   },
 
+  // Get processing status (Step 2)
+  async getProcessingStatus(receiptId) {
+    return ApiService.get(`/api/receipts/${receiptId}/processing-status`);
+  },
+
   // Generate wallet pass (Step 3)
   async generateWalletPass(receiptId) {
-    return ApiService.post(`/api/receipts/${receiptId}/generate-wallet-pass`);
+    console.log('📱 Calling wallet pass API for receipt:', receiptId);
+    try {
+      const result = await ApiService.post(`/api/receipts/${receiptId}/generate-wallet-pass`);
+      console.log('📱 Wallet pass API response:', result);
+      return result;
+    } catch (error) {
+      console.error('❌ Wallet pass API error:', error);
+      throw error;
+    }
+  },
+
+  // Get wallet pass status (Step 3)
+  async getWalletStatus(receiptId) {
+    return ApiService.get(`/api/receipts/${receiptId}/wallet-status`);
+  },
+
+  // Test wallet service configuration
+  async testWalletService() {
+    return ApiService.get('/api/wallet/test');
   },
 
   // Natural language query (Step 4)
@@ -51,17 +73,7 @@ export const receiptService = {
   // Health check
   async healthCheck() {
     return ApiService.get('/health');
-  },
-
-    // Process receipt with AI (Step 2)
-  async processReceipt(receiptId) {
-    return ApiService.post(`/api/receipts/${receiptId}/process`);
-  },
-
-  // Get processing status (Step 2)
-  async getProcessingStatus(receiptId) {
-    return ApiService.get(`/api/receipts/${receiptId}/processing-status`);
-  },
+  }
 };
 
 export const uploadReceipt = receiptService.uploadReceipt;

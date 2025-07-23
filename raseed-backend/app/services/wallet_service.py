@@ -12,6 +12,8 @@ import uuid
 import logging
 import json
 import os
+import jwt
+import time
 
 logger = logging.getLogger(__name__)
 
@@ -73,13 +75,7 @@ class WalletService:
     
     @staticmethod
     def get_issuer_id():
-        """Get the issuer ID for Google Wallet
-        
-        For Google Wallet, the issuer ID should be either:
-        1. Project number (recommended)
-        2. Project ID
-        3. Custom issuer ID from Google Pay Console
-        """
+        """Get the issuer ID for Google Wallet"""
         # Try to get issuer ID from settings first
         if hasattr(settings, 'GOOGLE_WALLET_ISSUER_ID') and settings.GOOGLE_WALLET_ISSUER_ID:
             return settings.GOOGLE_WALLET_ISSUER_ID
@@ -88,6 +84,108 @@ class WalletService:
         project_id = settings.FIREBASE_PROJECT_ID
         # Remove special characters that might cause issues
         return project_id.replace('-', '_').replace('.', '_')
+
+    @staticmethod
+    def get_service_account_credentials():
+        """Get service account credentials for JWT signing"""
+        try:
+            if os.path.exists(settings.FIREBASE_SERVICE_ACCOUNT_PATH):
+                with open(settings.FIREBASE_SERVICE_ACCOUNT_PATH, 'r') as f:
+                    service_account_info = json.load(f)
+                return service_account_info
+            else:
+                # Try environment variables
+                if settings.FIREBASE_PRIVATE_KEY and settings.FIREBASE_CLIENT_EMAIL:
+                    return {
+                        "type": "service_account",
+                        "project_id": settings.FIREBASE_PROJECT_ID,
+                        "private_key": settings.FIREBASE_PRIVATE_KEY.replace('\\n', '\n'),
+                        "client_email": settings.FIREBASE_CLIENT_EMAIL,
+                        "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+                        "token_uri": "https://oauth2.googleapis.com/token",
+                    }
+                else:
+                    raise Exception("No valid service account credentials found")
+        except Exception as e:
+            logger.error(f"❌ Failed to get service account credentials: {e}")
+            raise
+
+    @staticmethod
+    async def ensure_generic_class_exists(wallet_service, class_id: str):
+        """Ensure the generic class exists, create if it doesn't"""
+        try:
+            # Try to get existing class
+            existing_class = wallet_service.genericclass().get(resourceId=class_id).execute()
+            logger.info(f"📦 Using existing Generic class: {class_id}")
+            return existing_class
+        except HttpError as e:
+            if e.resp.status == 404:
+                # Class doesn't exist, create it
+                logger.info(f"📦 Creating new Generic class: {class_id}")
+                
+                class_payload = {
+                    "id": class_id,
+                    "issuerName": "Project Raseed",
+                    "reviewStatus": "UNDER_REVIEW",
+                    "hexBackgroundColor": "#4285F4",
+                    "logo": {
+                        "sourceUri": {
+                            "uri": "https://your-app.com/logo.png"  # Replace with your actual logo URL
+                        },
+                        "contentDescription": {
+                            "defaultValue": {
+                                "language": "en-US",
+                                "value": "Project Raseed Logo"
+                            }
+                        }
+                    }
+                }
+                
+                try:
+                    create_response = wallet_service.genericclass().insert(body=class_payload).execute()
+                    logger.info(f"✅ Generic class created successfully: {create_response.get('id')}")
+                    return create_response
+                except Exception as create_error:
+                    logger.error(f"❌ Failed to create Generic class: {create_error}")
+                    raise Exception(f"Could not create Generic class: {str(create_error)}")
+            else:
+                logger.error(f"❌ Error checking Generic class: {e}")
+                raise Exception(f"Generic class check failed: {str(e)}")
+
+    @staticmethod
+    def create_minimal_jwt(object_id: str, class_id: str, service_account_info: dict):
+        """Create a minimal JWT to stay under 1800 character limit"""
+        try:
+            # Minimal payload - only reference the object, don't include full definitions
+            payload = {
+                "iss": service_account_info["client_email"],
+                "aud": "google",
+                "typ": "savetowallet",
+                "iat": int(time.time()),
+                "origins": ["localhost"],  # Add your actual domain
+                "payload": {
+                    "genericObjects": [
+                        {
+                            "id": object_id
+                        }
+                    ]
+                }
+            }
+            
+            # Sign JWT with private key
+            private_key = service_account_info["private_key"]
+            signed_jwt = jwt.encode(payload, private_key, algorithm="RS256")
+            
+            logger.info(f"✅ Minimal JWT created. Length: {len(signed_jwt)} characters")
+            
+            if len(signed_jwt) > 1800:
+                logger.warning(f"⚠️ JWT length ({len(signed_jwt)}) exceeds recommended 1800 characters")
+            
+            return signed_jwt
+            
+        except Exception as e:
+            logger.error(f"❌ JWT creation failed: {e}")
+            raise Exception(f"JWT creation failed: {str(e)}")
 
     @staticmethod
     async def generate_pass_for_receipt(receipt_id: str) -> dict:
@@ -123,13 +221,10 @@ class WalletService:
         # Step 3: Build class and object IDs with proper format
         issuer_id = WalletService.get_issuer_id()
         
-        # Google Wallet class ID format: issuerID.classId
-        # Class suffix should be descriptive and unique
-        class_suffix = "raseed_receipt_class"
+        # Using Generic pass type (better for receipts than loyalty)
+        class_suffix = "raseed_receipt_generic_class"
         class_id = f"{issuer_id}.{class_suffix}"
         
-        # Object ID format: issuerID.objectId  
-        # Object suffix should be unique per receipt
         object_suffix = f"receipt_{receipt_id}_{uuid.uuid4().hex[:8]}"
         object_id = f"{issuer_id}.{object_suffix}"
         
@@ -137,152 +232,95 @@ class WalletService:
         logger.info(f"📝 Class ID: {class_id}")
         logger.info(f"📝 Object ID: {object_id}")
 
-        # Step 4: Ensure the Wallet class exists
+        # Step 4: Ensure the class exists (pre-create it)
         try:
-            # Try to get existing class
-            existing_class = wallet_service.genericclass().get(resourceId=class_id).execute()
-            logger.info(f"📦 Using existing Wallet class: {class_id}")
-        except HttpError as e:
-            if e.resp.status == 404:
-                # Class doesn't exist, create it
-                logger.info(f"📦 Creating new Wallet class: {class_id}")
-                
-                class_payload = {
-                    "id": class_id,
-                    "issuerName": "Project Raseed",
-                    "reviewStatus": "UNDER_REVIEW",
-                    "hexBackgroundColor": "#4285F4",
-                    "callbackOptions": {
-                        "updateRequestUrl": f"https://your-app.com/api/wallet/callback",
-                        "url": f"https://your-app.com/receipts/{receipt_id}"
-                    }
-                }
-                
-                try:
-                    create_response = wallet_service.genericclass().insert(body=class_payload).execute()
-                    logger.info(f"✅ Wallet class created successfully: {create_response.get('id')}")
-                except Exception as create_error:
-                    logger.error(f"❌ Failed to create Wallet class: {create_error}")
-                    # Log the full error details
-                    if hasattr(create_error, 'content'):
-                        logger.error(f"❌ Error details: {create_error.content}")
-                    raise Exception(f"Could not create Wallet class: {str(create_error)}")
-            else:
-                logger.error(f"❌ Error checking Wallet class: {e}")
-                # Log more details about the error
-                if hasattr(e, 'content'):
-                    logger.error(f"❌ Error details: {e.content}")
-                    
-                # If it's a 400 error, it might be an issuer ID issue
-                if e.resp.status == 400:
-                    raise Exception(f"Invalid class ID format. Check your issuer ID configuration. Class ID: {class_id}")
-                    
-                raise Exception(f"Wallet class check failed: {str(e)}")
+            await WalletService.ensure_generic_class_exists(wallet_service, class_id)
+        except Exception as e:
+            logger.error(f"❌ Class creation/verification failed: {e}")
+            raise
 
         # Step 5: Prepare pass data
         extracted = receipt.extracted_data
         
-        # Format items for display
-        items_list = []
+        # Format items for display (keep it concise)
+        items_summary = ""
         if extracted.items and len(extracted.items) > 0:
-            for item in extracted.items[:5]:  # Limit to first 5 items
-                price_str = f"${item.total_price:.2f}" if item.total_price else "N/A"
-                items_list.append(f"• {item.name}: {price_str}")
-            
-            if len(extracted.items) > 5:
-                items_list.append(f"... and {len(extracted.items) - 5} more items")
-        else:
-            items_list.append("• No items extracted")
-        
-        items_text = "\n".join(items_list)
+            first_item = extracted.items[0]
+            price_str = f"${first_item.total_price:.2f}" if first_item.total_price else ""
+            items_summary = f"{first_item.name} {price_str}"
+            if len(extracted.items) > 1:
+                items_summary += f" (+{len(extracted.items) - 1} more)"
         
         # Format receipt summary
         total_amount = f"${extracted.total_amount:.2f}" if extracted.total_amount else "N/A"
-        tax_amount = f"${extracted.tax_amount:.2f}" if extracted.tax_amount else "N/A"
         receipt_date = extracted.receipt_date or "Unknown date"
-        
-        # Step 6: Create the Wallet object (pass)
-        object_payload = {
+
+        # Step 6: Create the Generic Object (minimal version)
+        generic_object = {
             "id": object_id,
             "classId": class_id,
             "state": "ACTIVE",
+            "genericType": "GENERIC_TYPE_UNSPECIFIED",
             
             "cardTitle": {
                 "defaultValue": {
                     "language": "en-US",
-                    "value": f"Receipt - {extracted.merchant_name or 'Store'}"
+                    "value": f"{extracted.merchant_name or 'Receipt'}"
                 }
             },
             
             "header": {
                 "defaultValue": {
                     "language": "en-US", 
-                    "value": extracted.merchant_name or "Receipt"
+                    "value": f"Total: {total_amount}"
                 }
             },
             
             "subheader": {
                 "defaultValue": {
                     "language": "en-US",
-                    "value": f"Total: {total_amount} • {receipt_date}"
+                    "value": receipt_date
                 }
             },
             
             "textModulesData": [
                 {
-                    "header": "Receipt Summary",
-                    "body": f"Date: {receipt_date}\nTotal: {total_amount}\nTax: {tax_amount}\nItems: {len(extracted.items) if extracted.items else 0}"
-                },
-                {
-                    "header": "Items Purchased",
-                    "body": items_text
+                    "header": "Items",
+                    "body": items_summary or "Receipt items",
+                    "id": "items"
                 }
             ],
             
-            "linksModuleData": {
-                "uris": [
-                    {
-                        "uri": f"https://your-app.com/receipts/{receipt_id}",
-                        "description": "View in Project Raseed"
-                    }
-                ]
-            },
-            
-            # Use the receipt image from Firebase Storage
-            "heroImage": {
-                "sourceUri": {
-                    "uri": receipt.download_url  # This is the Firebase Storage URL
-                },
-                "contentDescription": {
-                    "defaultValue": {
-                        "language": "en-US", 
-                        "value": "Receipt Image"
-                    }
-                }
-            },
-            
-            "hexBackgroundColor": "#4285F4",
             "barcode": {
                 "type": "QR_CODE",
                 "value": f"raseed://receipt/{receipt_id}",
-                "alternateText": f"Receipt ID: {receipt_id}"
-            }
+                "alternateText": receipt_id[:8]
+            },
+            
+            "hexBackgroundColor": "#4285F4"
         }
 
-        # Step 7: Create the pass object
+        # Step 7: Create the object via API first (not in JWT)
         try:
-            logger.info(f"🎫 Creating Wallet object: {object_id}")
-            response = wallet_service.genericobject().insert(body=object_payload).execute()
-            logger.info(f"✅ Wallet pass created successfully: {response['id']}")
+            logger.info(f"🎫 Creating Generic object: {object_id}")
+            response = wallet_service.genericobject().insert(body=generic_object).execute()
+            logger.info(f"✅ Generic object created successfully: {response['id']}")
         except HttpError as e:
             error_details = e.content.decode() if hasattr(e, 'content') else str(e)
-            logger.error(f"❌ Wallet pass creation failed: {error_details}")
-            raise Exception(f"Failed to create wallet pass: {error_details}")
-        except Exception as e:
-            logger.error(f"❌ Unexpected error creating wallet pass: {e}")
-            raise Exception(f"Wallet pass creation error: {str(e)}")
+            logger.error(f"❌ Generic object creation failed: {error_details}")
+            raise Exception(f"Failed to create wallet object: {error_details}")
 
-        # Step 8: Save wallet info to Firestore
+        # Step 8: Create minimal JWT (only references the object)
+        try:
+            logger.info("🔐 Creating minimal JWT...")
+            service_account_info = WalletService.get_service_account_credentials()
+            signed_jwt = WalletService.create_minimal_jwt(object_id, class_id, service_account_info)
+            logger.info("✅ Minimal JWT signed successfully")
+        except Exception as e:
+            logger.error(f"❌ JWT creation failed: {e}")
+            raise Exception(f"Failed to create signed JWT: {str(e)}")
+
+        # Step 9: Save wallet info to Firestore
         if is_firebase_initialized():
             try:
                 db = get_firestore_client()
@@ -292,10 +330,11 @@ class WalletService:
                 doc = doc_ref.get()
                 if doc.exists:
                     update_data = {
-                        "wallet_object_id": response["id"],
-                        "wallet_state": response.get("state", "ACTIVE"),
+                        "wallet_object_id": object_id,
+                        "wallet_class_id": class_id,
+                        "wallet_state": "ACTIVE",
                         "wallet_created_at": datetime.datetime.utcnow(),
-                        "wallet_save_url": f"https://pay.google.com/gp/v/save/{response['id']}"
+                        "wallet_jwt_length": len(signed_jwt)
                     }
                     doc_ref.update(update_data)
                     logger.info("✅ Firestore updated with wallet pass info")
@@ -305,18 +344,20 @@ class WalletService:
                 logger.error(f"❌ Firestore update failed: {e}")
                 # Don't fail the whole process if Firestore update fails
 
-        # Step 9: Generate and return save URL
-        save_url = f"https://pay.google.com/gp/v/save/{response['id']}"
+        # Step 10: Generate save URL with signed JWT
+        save_url = f"https://pay.google.com/gp/v/save/{signed_jwt}"
         
         result = {
             "save_url": save_url,
-            "object_id": response["id"],
+            "object_id": object_id,
             "class_id": class_id,
-            "wallet_state": response.get("state", "ACTIVE")
+            "wallet_state": "ACTIVE",
+            "jwt_length": len(signed_jwt)
         }
         
         logger.info(f"🎉 Wallet pass generation completed successfully!")
         logger.info(f"🔗 Save URL: {save_url}")
+        logger.info(f"📏 JWT Length: {len(signed_jwt)} characters")
         
         return result
 
@@ -341,6 +382,7 @@ class WalletService:
             wallet_service = WalletService.get_wallet_client()
             
             try:
+                # Use genericobject for generic passes
                 wallet_object = wallet_service.genericobject().get(
                     resourceId=receipt.wallet_object_id
                 ).execute()
@@ -349,8 +391,7 @@ class WalletService:
                     "status": "success",
                     "wallet_state": wallet_object.get("state", "UNKNOWN"),
                     "object_id": wallet_object.get("id"),
-                    "has_users": wallet_object.get("hasUsers", False),
-                    "save_url": f"https://pay.google.com/gp/v/save/{wallet_object.get('id')}"
+                    "has_users": wallet_object.get("hasUsers", False)
                 }
             except HttpError as e:
                 if e.resp.status == 404:

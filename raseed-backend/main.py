@@ -40,8 +40,19 @@ app.add_middleware(
 )
 
 # Include routers
-app.include_router(health_router, tags=["Health"])
+app.include_router(health_router, prefix="/api", tags=["Health"])
 app.include_router(receipt_router, prefix="/api", tags=["Receipts"])
+
+# Add a root-level health check for compatibility
+@app.get("/health")
+async def root_health_check():
+    """Root-level health check endpoint"""
+    from app.core.database import is_firebase_initialized
+    return {
+        "status": "healthy",
+        "firebase_initialized": is_firebase_initialized(),
+        "timestamp": "2025-07-18T10:30:00Z"
+    }
 
 @app.get("/")
 async def root():

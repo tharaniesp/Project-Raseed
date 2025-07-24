@@ -403,3 +403,169 @@ class WalletService:
         except Exception as e:
             logger.error(f"❌ Failed to get pass status: {e}")
             return {"status": "error", "error": str(e)}
+    
+    @staticmethod
+    async def create_shopping_list_pass(title: str, items: list, estimated_total: float = None, metadata: dict = None) -> dict:
+        """Create a Google Wallet pass specifically for shopping lists"""
+        try:
+            logger.info(f"🛒 Creating shopping list wallet pass: {title}")
+            
+            # Check if wallet service is available
+            if not WalletService.is_wallet_available():
+                raise Exception("Google Wallet service not available")
+            
+            # Generate unique identifiers
+            class_suffix = f"shopping_list_{int(time.time())}"
+            object_suffix = f"list_{uuid.uuid4().hex[:8]}"
+            
+            issuer_id = WalletService.get_issuer_id()
+            class_id = f"{issuer_id}.{class_suffix}"
+            object_id = f"{issuer_id}.{object_suffix}"
+            
+            # Create shopping list specific content
+            shopping_items_text = []
+            for i, item in enumerate(items, 1):
+                quantity = item.get('quantity', '1')
+                name = item.get('name', 'Unknown Item')
+                category = item.get('category', '')
+                
+                item_line = f"{i}. {quantity}x {name}"
+                if category:
+                    item_line += f" ({category})"
+                shopping_items_text.append(item_line)
+            
+            # Create generic class for shopping list
+            generic_class = {
+                "id": class_id,
+                "classTemplateInfo": {
+                    "cardTemplateOverride": {
+                        "cardRowTemplateInfos": [
+                            {
+                                "twoItems": {
+                                    "startItem": {
+                                        "firstValue": {
+                                            "fields": [
+                                                {
+                                                    "fieldPath": "object.textModulesData['items']"
+                                                }
+                                            ]
+                                        }
+                                    }
+                                }
+                            }
+                        ]
+                    }
+                }
+            }
+            
+            # Create generic object for shopping list
+            generic_object = {
+                "id": object_id,
+                "classId": class_id,
+                "state": "ACTIVE",
+                "logo": {
+                    "sourceUri": {
+                        "uri": "https://storage.googleapis.com/raseed-app/icons/shopping-list-icon.png"
+                    },
+                    "contentDescription": {
+                        "defaultValue": {
+                            "language": "en-US",
+                            "value": "Shopping List"
+                        }
+                    }
+                },
+                "cardTitle": {
+                    "defaultValue": {
+                        "language": "en-US", 
+                        "value": title
+                    }
+                },
+                "subheader": {
+                    "defaultValue": {
+                        "language": "en-US",
+                        "value": f"{len(items)} items"
+                    }
+                },
+                "header": {
+                    "defaultValue": {
+                        "language": "en-US",
+                        "value": "Shopping List"
+                    }
+                },
+                "textModulesData": [
+                    {
+                        "id": "items",
+                        "header": "Items to Buy",
+                        "body": "\n".join(shopping_items_text)
+                    }
+                ],
+                "linksModuleData": {
+                    "uris": []
+                }
+            }
+            
+            # Add estimated total if provided
+            if estimated_total:
+                generic_object["textModulesData"].append({
+                    "id": "total",
+                    "header": "Estimated Total",
+                    "body": f"${estimated_total:.2f}"
+                })
+            
+            # Add metadata if provided
+            if metadata:
+                generic_object["textModulesData"].append({
+                    "id": "metadata",
+                    "header": "Generated",
+                    "body": f"Query ID: {metadata.get('query_id', 'N/A')}\nLanguage: {metadata.get('detected_language', 'en')}"
+                })
+            
+            # Get wallet client
+            wallet_service = WalletService.get_wallet_client()
+            
+            # Create or update the class
+            try:
+                wallet_service.genericclass().insert(body=generic_class).execute()
+                logger.info(f"✅ Created shopping list class: {class_id}")
+            except HttpError as e:
+                if e.resp.status == 409:  # Already exists
+                    logger.info(f"📋 Shopping list class already exists: {class_id}")
+                else:
+                    raise e
+            
+            # Create the object
+            try:
+                wallet_service.genericobject().insert(body=generic_object).execute()
+                logger.info(f"✅ Created shopping list object: {object_id}")
+            except HttpError as e:
+                if e.resp.status == 409:  # Already exists
+                    wallet_service.genericobject().update(
+                        resourceId=object_id, 
+                        body=generic_object
+                    ).execute()
+                    logger.info(f"📝 Updated existing shopping list object: {object_id}")
+                else:
+                    raise e
+            
+            # Generate signed JWT
+            signed_jwt = WalletService.create_jwt(generic_object, object_id)
+            save_url = f"https://pay.google.com/gp/v/save/{signed_jwt}"
+            
+            result = {
+                "save_url": save_url,
+                "object_id": object_id,
+                "class_id": class_id,
+                "wallet_state": "ACTIVE",
+                "items_count": len(items),
+                "estimated_total": estimated_total
+            }
+            
+            logger.info(f"🎉 Shopping list wallet pass created successfully!")
+            logger.info(f"🔗 Save URL: {save_url}")
+            logger.info(f"📦 Items: {len(items)}")
+            
+            return result
+            
+        except Exception as e:
+            logger.error(f"❌ Shopping list wallet pass creation failed: {e}")
+            raise e

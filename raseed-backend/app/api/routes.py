@@ -1,10 +1,14 @@
-# app/api/routes.py - Updated with Auto Wallet Pass Generation
+# app/api/routes.py - Updated with Auto Wallet Pass Generation and Natural Language Queries
 from fastapi import APIRouter, File, UploadFile, HTTPException, Query
 from typing import List
 import logging
 
 from app.services.receipt_service import ReceiptService
-from app.models.receipt import ReceiptListResponse, ReceiptResponse, UploadResponse
+from app.models.receipt import (
+    ReceiptListResponse, ReceiptResponse, UploadResponse,
+    QueryRequest, QueryResponse, WalletPassRequest, WalletPassResponse,
+    ShoppingListResponse
+)
 from app.core.database import is_firebase_initialized
 from app.core.config import settings
 
@@ -321,12 +325,194 @@ async def test_wallet_service():
             "message": "Failed to test wallet service"
         }
 
-@receipt_router.post("/query")
-async def query_receipts(query: str):
-    """Natural language query (Step 4)"""
-    # TODO: Implement in Step 4
-    return {
-        "message": "Natural language queries will be implemented in Step 4",
-        "query": query,
-        "answer": "Feature coming soon!"
-    }
+# Natural Language Query Endpoints
+@receipt_router.post("/query", response_model=QueryResponse)
+async def process_natural_language_query(request: QueryRequest):
+    """
+    Process natural language queries about receipts and purchases
+    
+    Examples:
+    - "What can I cook with the food I bought from the last two weeks?"
+    - "What ingredients do I need to buy to be able to cook this dish?"
+    - "Do I have enough laundry detergent for my weekly laundry?"
+    """
+    from app.services.query_service import query_service
+    from app.models.receipt import QueryRequest, QueryResponse
+    
+    logger.info(f"🔍 Received natural language query: {request.query[:100]}...")
+    
+    try:
+        response = await query_service.process_natural_language_query(request)
+        logger.info(f"✅ Query processed successfully. Type: {response.query_type}")
+        return response
+    except Exception as e:
+        logger.error(f"❌ Query processing failed: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to process query: {str(e)}"
+        )
+
+@receipt_router.post("/query/create-wallet-pass", response_model=WalletPassResponse)
+async def create_wallet_pass_from_query(request: WalletPassRequest):
+    """
+    Create a Google Wallet pass from a previous query that generated actionable items
+    """
+    from app.services.query_service import query_service
+    from app.models.receipt import WalletPassRequest, WalletPassResponse
+    
+    logger.info(f"🎫 Creating wallet pass for query: {request.query_id}")
+    
+    try:
+        response = await query_service.create_wallet_pass_from_query(request)
+        
+        if response.success:
+            logger.info(f"✅ Wallet pass created: {response.wallet_object_id}")
+        else:
+            logger.warning(f"⚠️ Wallet pass creation failed: {response.error}")
+        
+        return response
+    except Exception as e:
+        logger.error(f"❌ Wallet pass creation failed: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to create wallet pass: {str(e)}"
+        )
+
+@receipt_router.post("/query/shopping-list", response_model=ShoppingListResponse)
+async def generate_shopping_list(request: dict):
+    """
+    Generate a detailed shopping list based on a natural language query
+    """
+    from app.services.query_service import query_service
+    from app.models.receipt import ShoppingListResponse
+    
+    query = request.get("query", "")
+    user_id = request.get("user_id")
+    
+    logger.info(f"🛒 Generating shopping list for: {query[:50]}...")
+    
+    try:
+        response = await query_service.generate_shopping_list(query, user_id)
+        logger.info(f"✅ Shopping list generated with {len(response.items)} items")
+        return response
+    except Exception as e:
+        logger.error(f"❌ Shopping list generation failed: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to generate shopping list: {str(e)}"
+        )
+
+@receipt_router.get("/query/statistics")
+async def get_query_statistics():
+    """Get statistics about recent queries and wallet pass generation"""
+    try:
+        from app.services.query_service import query_service
+        
+        # Safely check vertex AI availability
+        vertex_ai_available = False
+        try:
+            from app.services.vertex_ai_agent_service import vertex_ai_agent_service
+            vertex_ai_available = vertex_ai_agent_service is not None and vertex_ai_agent_service.is_available()
+        except Exception as e:
+            logger.warning(f"⚠️ Could not check Vertex AI availability: {e}")
+        
+        # Safely check wallet service availability
+        wallet_service_available = False
+        try:
+            from app.services.wallet_service import WalletService
+            wallet_service_available = WalletService.is_wallet_available()
+        except Exception as e:
+            logger.warning(f"⚠️ Could not check Wallet service availability: {e}")
+        
+        stats = query_service.get_query_statistics()
+        return {
+            "success": True,
+            "statistics": stats,
+            "vertex_ai_available": vertex_ai_available,
+            "wallet_service_available": wallet_service_available
+        }
+    except Exception as e:
+        logger.error(f"❌ Failed to get query statistics: {e}")
+        return {
+            "success": False,
+            "error": str(e),
+            "vertex_ai_available": False,
+            "wallet_service_available": False
+        }
+
+@receipt_router.get("/vertex-ai/status")
+async def get_vertex_ai_status():
+    """Get Vertex AI configuration and status (simplified - no Data Store needed)"""
+    try:
+        from app.services.vertex_ai_agent_service import vertex_ai_agent_service
+        
+        # Check service availability
+        agent_available = vertex_ai_agent_service is not None and vertex_ai_agent_service.is_available()
+        
+        # Get configuration details
+        config = {
+            "project_id": getattr(settings, 'FIREBASE_PROJECT_ID', None),
+            "location": getattr(settings, 'VERTEX_AI_LOCATION', 'us-central1'),
+            "model": getattr(settings, 'VERTEX_AI_MODEL', 'gemini-1.5-pro'),
+            "multi_language_enabled": getattr(settings, 'ENABLE_MULTI_LANGUAGE', True)
+        }
+        
+        # Check package availability
+        packages_status = {}
+        required_packages = [
+            ('google.cloud.aiplatform', 'Vertex AI Platform'),
+            ('vertexai', 'Vertex AI SDK'),
+            ('langdetect', 'Language Detection'),
+            ('googletrans', 'Google Translate')
+        ]
+        
+        for package, name in required_packages.items():
+            try:
+                __import__(package.replace('.', '_') if '.' in package else package)
+                packages_status[name] = True
+            except ImportError:
+                packages_status[name] = False
+        
+        # Overall status
+        fully_configured = (
+            agent_available and 
+            all(packages_status.values()) and
+            config['project_id']
+        )
+        
+        # Get recent receipts count for context
+        try:
+            receipts = await ReceiptService.get_receipts(limit=100, offset=0)
+            processed_receipts = len([r for r in receipts if r.extracted_data])
+        except:
+            processed_receipts = 0
+        
+        return {
+            "success": True,
+            "vertex_ai_status": {
+                "service_available": agent_available,
+                "fully_configured": fully_configured,
+                "using_vertex_ai": agent_available,  # vs Gemini fallback
+                "data_source": "Firestore (direct access)",
+                "available_receipts": processed_receipts,
+                "configuration": config,
+                "packages": packages_status
+            },
+            "recommendations": [] if fully_configured else [
+                "Install missing packages: pip install google-cloud-aiplatform vertexai" if not all(packages_status.values()) else None,
+                "Enable Vertex AI API in Google Cloud Console" if config['project_id'] and not agent_available else None,
+                "Restart server after configuration changes" if config['project_id'] else None
+            ]
+        }
+        
+    except Exception as e:
+        logger.error(f"❌ Vertex AI status check failed: {e}")
+        return {
+            "success": False,
+            "error": str(e),
+            "vertex_ai_status": {
+                "service_available": False,
+                "fully_configured": False,
+                "using_vertex_ai": False
+            }
+        }

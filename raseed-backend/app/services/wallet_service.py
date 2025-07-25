@@ -171,8 +171,8 @@ class WalletService:
             "linksModuleData": {
                 "uris": [
                     {
-                        "uri": f"https://your-app.com/receipts/{receipt.id}",
-                        "description": "View Full Receipt Details",
+                        "uri": f"http://localhost:3000/query",
+                        "description": "Chat with Personal Assistant",
                         "id": "receipt_details"
                     }
                 ]

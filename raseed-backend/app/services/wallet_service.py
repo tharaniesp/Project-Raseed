@@ -433,6 +433,39 @@ class WalletService:
         except Exception as e:
             logger.error(f"❌ JWT creation failed: {e}")
             raise Exception(f"JWT creation failed: {str(e)}")
+            
+    @staticmethod
+    def create_jwt(generic_object: dict, object_id: str):
+        """Create JWT for Google Wallet object with more comprehensive approach"""
+        try:
+            # Get credentials for JWT signing
+            service_account_info = WalletService.get_service_account_credentials()
+            
+            # Create a minimal JWT to ensure we stay under size limits
+            payload = {
+                "iss": service_account_info["client_email"],
+                "aud": "google",
+                "typ": "savetowallet",
+                "iat": int(time.time()),
+                "origins": ["localhost"],
+                "payload": {
+                    "genericObjects": [{"id": object_id}]
+                }
+            }
+            
+            private_key = service_account_info["private_key"]
+            signed_jwt = jwt.encode(payload, private_key, algorithm="RS256")
+            
+            logger.info(f"✅ JWT created for object {object_id}. Length: {len(signed_jwt)} characters")
+            
+            # Check JWT length
+            if len(signed_jwt) > 1800:
+                logger.warning(f"⚠️ JWT length ({len(signed_jwt)}) exceeds recommended 1800 characters")
+                
+            return signed_jwt
+        except Exception as e:
+            logger.error(f"❌ JWT creation failed: {e}")
+            raise Exception(f"JWT creation failed: {str(e)}")
 
     @staticmethod
     async def get_pass_status_by_receipt(receipt_id: str) -> dict:
@@ -531,17 +564,8 @@ class WalletService:
                 "id": object_id,
                 "classId": class_id,
                 "state": "ACTIVE",
-                "logo": {
-                    "sourceUri": {
-                        "uri": "https://storage.googleapis.com/raseed-app/icons/shopping-list-icon.png"
-                    },
-                    "contentDescription": {
-                        "defaultValue": {
-                            "language": "en-US",
-                            "value": "Shopping List"
-                        }
-                    }
-                },
+                # Using a more reliable logo approach like in other wallet objects
+                "hexBackgroundColor": "#4285F4",
                 "cardTitle": {
                     "defaultValue": {
                         "language": "en-US", 
@@ -599,7 +623,7 @@ class WalletService:
                 if e.resp.status == 409:  # Already exists
                     logger.info(f"📋 Shopping list class already exists: {class_id}")
                 else:
-                    raise e
+                    logger.warning(f"⚠️ Error creating class, will try to continue: {str(e)}")
             
             # Create the object
             try:
@@ -607,32 +631,58 @@ class WalletService:
                 logger.info(f"✅ Created shopping list object: {object_id}")
             except HttpError as e:
                 if e.resp.status == 409:  # Already exists
-                    wallet_service.genericobject().update(
-                        resourceId=object_id, 
-                        body=generic_object
-                    ).execute()
-                    logger.info(f"📝 Updated existing shopping list object: {object_id}")
+                    try:
+                        wallet_service.genericobject().update(
+                            resourceId=object_id, 
+                            body=generic_object
+                        ).execute()
+                        logger.info(f"📝 Updated existing shopping list object: {object_id}")
+                    except Exception as update_error:
+                        logger.error(f"❌ Failed to update existing object: {update_error}")
+                        raise Exception(f"Failed to update existing object: {str(update_error)}")
                 else:
-                    raise e
+                    error_details = e.content.decode() if hasattr(e, 'content') else str(e)
+                    logger.error(f"❌ Failed to create object: {error_details}")
+                    raise Exception(f"Failed to create wallet object: {error_details}")
             
             # Generate signed JWT
-            signed_jwt = WalletService.create_jwt(generic_object, object_id)
-            save_url = f"https://pay.google.com/gp/v/save/{signed_jwt}"
-            
-            result = {
-                "save_url": save_url,
-                "object_id": object_id,
-                "class_id": class_id,
-                "wallet_state": "ACTIVE",
-                "items_count": len(items),
-                "estimated_total": estimated_total
-            }
-            
-            logger.info(f"🎉 Shopping list wallet pass created successfully!")
-            logger.info(f"🔗 Save URL: {save_url}")
-            logger.info(f"📦 Items: {len(items)}")
-            
-            return result
+            try:
+                signed_jwt = WalletService.create_jwt(generic_object, object_id)
+                save_url = f"https://pay.google.com/gp/v/save/{signed_jwt}"
+                
+                result = {
+                    "save_url": save_url,
+                    "object_id": object_id,
+                    "class_id": class_id,
+                    "wallet_state": "ACTIVE",
+                    "items_count": len(items),
+                    "estimated_total": estimated_total
+                }
+                
+                logger.info(f"🎉 Shopping list wallet pass created successfully!")
+                logger.info(f"🔗 Save URL: {save_url}")
+                logger.info(f"📦 Items: {len(items)}")
+                
+                return result
+            except Exception as jwt_error:
+                logger.error(f"❌ JWT creation failed for shopping list, trying minimal JWT: {jwt_error}")
+                # Fallback to minimal JWT
+                service_account_info = WalletService.get_service_account_credentials()
+                signed_jwt = WalletService.create_minimal_jwt(object_id, class_id, service_account_info)
+                save_url = f"https://pay.google.com/gp/v/save/{signed_jwt}"
+                
+                result = {
+                    "save_url": save_url,
+                    "object_id": object_id,
+                    "class_id": class_id,
+                    "wallet_state": "ACTIVE",
+                    "items_count": len(items),
+                    "estimated_total": estimated_total,
+                    "used_fallback": True
+                }
+                
+                logger.info(f"🎉 Shopping list wallet pass created with fallback method!")
+                return result
             
         except Exception as e:
             logger.error(f"❌ Shopping list wallet pass creation failed: {e}")

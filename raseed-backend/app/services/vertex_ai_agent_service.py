@@ -15,6 +15,16 @@ from app.services.receipt_service import ReceiptService
 
 # Try to import optional dependencies with fallbacks
 try:
+    import google.generativeai as genai
+    GENERATIVE_AI_AVAILABLE = True
+    # Configure with API key if available
+    if settings.GEMINI_API_KEY:
+        genai.configure(api_key=settings.GEMINI_API_KEY)
+except ImportError:
+    GENERATIVE_AI_AVAILABLE = False
+    genai = None
+
+try:
     from google.cloud import aiplatform
     from google.cloud import discoveryengine_v1 as discoveryengine
     from google.api_core import exceptions as gcp_exceptions
@@ -41,50 +51,46 @@ except ImportError:
 logger = logging.getLogger(__name__)
 
 class VertexAIAgentService:
-    """Service for handling local language queries using Vertex AI Agent Builder"""
+    """Service for handling local language queries using AI models"""
     
     def __init__(self):
-        """Initialize Vertex AI Agent Service"""
+        """Initialize AI Agent Service"""
         self.project_id = settings.FIREBASE_PROJECT_ID
-        # FORCE the correct location to bypass .env issues
-        self.location = "us-central1"
-        self.data_store_id = getattr(settings, 'VERTEX_AI_DATA_STORE_ID', 'raseed-receipts-datastore')
+        self.location = settings.VERTEX_AI_LOCATION
         
-        # Initialize translator if available
+        # Initialize based on configuration
+        self.use_vertex_ai = settings.USE_VERTEX_AI and VERTEX_AI_AVAILABLE
+        self.use_generative_ai = settings.USE_GENERATIVE_AI and GENERATIVE_AI_AVAILABLE
+        
+        # Set up translator if available
+        self.translator = None
         if GOOGLETRANS_AVAILABLE:
             try:
                 self.translator = Translator()
-            except Exception:
-                self.translator = None
-                logger.warning("⚠️ Translator initialization failed")
-        else:
-            self.translator = None
+            except Exception as e:
+                logger.warning(f"⚠️ Failed to initialize translator: {e}")
         
-        # Initialize clients
-        self._client = None
-        self._aiplatform_client = None
-        self._initialize_clients()
-    
-    def _initialize_clients(self):
-        """Initialize Google Cloud clients"""
-        if not VERTEX_AI_AVAILABLE:
-            logger.warning("⚠️ Vertex AI packages not installed - using fallback mode")
-            return
-            
-        try:
-            if self.project_id:
-                # Initialize Vertex AI for generative models
-                # The location is now hardcoded in __init__
-                aiplatform.init(project=self.project_id, location=self.location)
-                logger.info(f"✅ Vertex AI Generative AI initialized for project: {self.project_id} in location: {self.location}")
-            else:
-                logger.warning("⚠️ FIREBASE_PROJECT_ID not set - Vertex AI disabled")
-        except Exception as e:
-            logger.error(f"❌ Failed to initialize Vertex AI: {e}")
-    
+        # Initialize Vertex AI if enabled and available
+        if self.use_vertex_ai:
+            try:
+                import vertexai
+                vertexai.init(project=self.project_id, location=self.location)
+                logger.info(f"✅ Vertex AI initialized: {self.project_id} in {self.location}")
+            except Exception as e:
+                logger.warning(f"⚠️ Vertex AI initialization failed: {e}")
+                self.use_vertex_ai = False
+        
+        # Log which AI service will be used
+        if self.use_generative_ai:
+            logger.info(f"✅ Using Google Generative AI with model: {settings.GENERATIVE_AI_MODEL}")
+        elif self.use_vertex_ai:
+            logger.info(f"✅ Using Vertex AI with model: {settings.VERTEX_AI_MODEL}")
+        else:
+            logger.warning("⚠️ No AI service available - queries will return fallback responses")
+
     def is_available(self) -> bool:
-        """Check if Vertex AI Generative AI service is available"""
-        return VERTEX_AI_AVAILABLE and self.project_id is not None
+        """Check if any AI service is available"""
+        return self.use_generative_ai or self.use_vertex_ai
     
     def detect_language(self, text: str) -> str:
         """Detect language of input text"""
@@ -274,68 +280,76 @@ class VertexAIAgentService:
             - Be conversational and helpful
             """
     
-    async def process_query_with_vertex_ai(self, context_prompt: str) -> str:
-        """Process query using Vertex AI Generative AI with Firestore data"""
-        if not self.is_available():
-            logger.warning("⚠️ Vertex AI not available, using local fallback")
-            return await self._process_locally(context_prompt)
-        
+    async def process_query_with_ai(self, context_prompt: str) -> str:
+        """Process query using available AI service"""
+        if self.use_generative_ai and GENERATIVE_AI_AVAILABLE:
+            return await self.process_query_with_generative_ai(context_prompt)
+        elif self.use_vertex_ai and VERTEX_AI_AVAILABLE:
+            return await self.process_query_with_vertex_ai(context_prompt)
+        else:
+            logger.warning("⚠️ No AI service available, returning fallback response")
+            return "I apologize, but I'm currently unable to process your request due to AI service limitations. Please try again later."
+
+    async def process_query_with_generative_ai(self, context_prompt: str) -> str:
+        """Process query using Google Generative AI"""
         try:
-            logger.info("🤖 Processing with Vertex AI Generative AI...")
+            logger.info("🤖 Processing with Google Generative AI...")
             
-            from vertexai.generative_models import GenerativeModel
+            model = genai.GenerativeModel(settings.GENERATIVE_AI_MODEL)
             
-            # Use the model from settings for consistency
-            model_name = settings.VERTEX_AI_MODEL
-            model = GenerativeModel(model_name)
-            logger.info(f"  - Using model: {model_name}")
-            
-            # Generate response using Vertex AI
-            response = model.generate_content(
-                context_prompt,
-                generation_config={
-                    "temperature": 0.7,
-                    "top_p": 0.8,
-                    "top_k": 40,
-                    "max_output_tokens": 2048,  # More tokens for detailed responses
-                    "candidate_count": 1
-                }
+            generation_config = genai.types.GenerationConfig(
+                temperature=0.7,
+                top_p=0.8,
+                top_k=40,
+                max_output_tokens=2048,
             )
             
-            ai_response = response.text
-            logger.info(f"✅ Vertex AI Generative AI responded with {len(ai_response)} characters")
-            return ai_response
+            response = model.generate_content(
+                context_prompt,
+                generation_config=generation_config
+            )
             
-        except ImportError:
-            logger.warning("⚠️ vertexai package not available, using local fallback")
-            return await self._process_locally(context_prompt)
-        except Exception as e:
-            logger.warning(f"⚠️ Vertex AI processing failed: {e}, using local fallback")
-            return await self._process_locally(context_prompt)
-    
-    async def _process_locally(self, context_prompt: str) -> str:
-        """Local processing fallback using existing Gemini service"""
-        try:
-            from app.services.ai_service import ai_service
-            
-            if ai_service.is_available():
-                # Use the existing Gemini service as fallback
-                response = ai_service.model.generate_content(
-                    context_prompt,
-                    generation_config={
-                        "temperature": 0.7,
-                        "top_p": 0.8,
-                        "top_k": 40,
-                        "max_output_tokens": 1024,
-                    }
-                )
+            if response.text:
+                logger.info("✅ Google Generative AI response received")
                 return response.text
             else:
-                return "I apologize, but the AI service is currently unavailable. Please try again later."
+                logger.warning("⚠️ Empty response from Google Generative AI")
+                return "I couldn't generate a response. Please try rephrasing your question."
                 
         except Exception as e:
-            logger.error(f"❌ Local processing fallback failed: {e}")
-            return "I'm sorry, I couldn't process your request at the moment. Please try again later."
+            logger.error(f"❌ Google Generative AI error: {e}")
+            return f"I encountered an error processing your request: {str(e)}"
+
+    async def process_query_with_vertex_ai(self, context_prompt: str) -> str:
+        """Process query using Vertex AI (fallback method)"""
+        try:
+            logger.info("🤖 Processing with Vertex AI...")
+            
+            from vertexai.generative_models import GenerativeModel
+            model = GenerativeModel(settings.VERTEX_AI_MODEL)
+            
+            generation_config = {
+                "temperature": 0.7,
+                "top_p": 0.8,
+                "top_k": 40,
+                "max_output_tokens": 2048,
+            }
+            
+            response = model.generate_content(
+                context_prompt,
+                generation_config=generation_config
+            )
+            
+            if response.text:
+                logger.info("✅ Vertex AI response received")
+                return response.text
+            else:
+                logger.warning("⚠️ Empty response from Vertex AI")
+                return "I couldn't generate a response. Please try rephrasing your question."
+                
+        except Exception as e:
+            logger.error(f"❌ Vertex AI error: {e}")
+            return f"I encountered an error with Vertex AI: {str(e)}"
     
     def extract_actionable_items(self, response_text: str, query_type: QueryType) -> List[ActionableItem]:
         """Extract actionable items (shopping list items) from AI response"""
@@ -391,9 +405,9 @@ class VertexAIAgentService:
             return "other"
     
     async def process_query(self, request: QueryRequest) -> QueryResponse:
-        """Main method to process a natural language query using Vertex AI Agent"""
+        """Main method to process a natural language query using available AI service"""
         try:
-            logger.info(f"🔍 Processing query with Vertex AI Agent: {request.query[:100]}...")
+            logger.info(f"🔍 Processing query: {request.query[:100]}...")
             
             # Detect language
             detected_language = request.language or self.detect_language(request.query)
@@ -410,16 +424,11 @@ class VertexAIAgentService:
             receipts_data = await self.get_user_receipt_data(request.user_id)
             logger.info(f"📊 Retrieved {len(receipts_data)} recent receipts")
             
-            # Create enhanced context prompt for Vertex AI
-            if self.is_available():
-                context_prompt = await self.create_enhanced_context_prompt(english_query, receipts_data, query_type)
-                logger.info("🤖 Using Vertex AI Agent Builder for processing")
-            else:
-                context_prompt = self.create_context_prompt(english_query, receipts_data, query_type)
-                logger.info("🔄 Using Gemini fallback for processing")
+            # Create context prompt
+            context_prompt = await self.create_enhanced_context_prompt(english_query, receipts_data, query_type)
             
-            # Process with Vertex AI or fallback
-            ai_response = await self.process_query_with_vertex_ai(context_prompt)
+            # Process with available AI service
+            ai_response = await self.process_query_with_ai(context_prompt)
             
             # Extract actionable items
             actionable_items = self.extract_actionable_items(ai_response, query_type)
@@ -436,21 +445,26 @@ class VertexAIAgentService:
             # Determine if we can create a wallet pass
             can_create_wallet_pass = len(actionable_items) > 0
             
-            # Build response
-            response = QueryResponse(
+            # Generate suggested actions
+            suggested_actions = []
+            if can_create_wallet_pass:
+                suggested_actions.append("Create Google Wallet pass with shopping list")
+            if query_type == QueryType.COOKING_SUGGESTIONS:
+                suggested_actions.append("Save recipe for later")
+            
+            # Calculate confidence score
+            confidence = 0.8 if self.is_available() else 0.5
+            
+            return QueryResponse(
                 answer=translated_response,
-                confidence=0.90 if self.is_available() else 0.75,  # Higher confidence for Vertex AI
+                confidence=confidence,
                 query_type=query_type,
                 detected_language=detected_language,
-                sources=[f"Recent receipts ({len(receipts_data)} analyzed)", 
-                        "Vertex AI Agent Builder" if self.is_available() else "Gemini AI"],
+                sources=[f"AI Service: {'Google Generative AI' if self.use_generative_ai else 'Vertex AI' if self.use_vertex_ai else 'Fallback'}"],
                 actionable_items=actionable_items,
                 can_create_wallet_pass=can_create_wallet_pass,
-                suggested_actions=self._get_suggested_actions(query_type, actionable_items)
+                suggested_actions=suggested_actions
             )
-            
-            logger.info(f"✅ Query processed successfully. Type: {query_type}, Items: {len(actionable_items)}, Confidence: {response.confidence}")
-            return response
             
         except Exception as e:
             logger.error(f"❌ Query processing failed: {e}")
@@ -459,10 +473,10 @@ class VertexAIAgentService:
                 confidence=0.0,
                 query_type=QueryType.GENERAL,
                 detected_language=request.language or 'en',
-                sources=["Error handler"],
+                sources=[],
                 actionable_items=[],
                 can_create_wallet_pass=False,
-                suggested_actions=["Try rephrasing your question", "Contact support if the issue persists"]
+                suggested_actions=["Try rephrasing your question", "Contact support if issue persists"]
             )
     
     def _get_suggested_actions(self, query_type: QueryType, actionable_items: List[ActionableItem]) -> List[str]:

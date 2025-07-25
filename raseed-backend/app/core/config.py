@@ -37,7 +37,7 @@ class Settings(BaseSettings):
         "video/mp4", "video/webm", "image/jpg"
     ]
     
-    # AI/ML Configuration (Step 2)
+    # AI/ML Configuration - Use Google Generative AI (proven to work)
     GEMINI_API_KEY: str = "AIzaSyCem5cxDNTWmu_bmB3Z3XYnsOPy-cfzenw"
     OPENAI_API_KEY: str = ""
     
@@ -45,9 +45,14 @@ class Settings(BaseSettings):
     AI_PROCESSING_TIMEOUT: int = 60  # seconds
     AI_MAX_RETRIES: int = 3
     
-    # Vertex AI Configuration (Simplified - no Data Store needed)
-    VERTEX_AI_LOCATION: str = "us-central1"  # A supported region for Vertex AI
-    VERTEX_AI_MODEL: str = "gemini-1.0-pro"  # Switched to a standard, widely available model
+    # AI Model Configuration - Use Google Generative AI instead of Vertex AI
+    USE_VERTEX_AI: bool = False  # Disabled - publisher models not accessible
+    USE_GENERATIVE_AI: bool = True  # Enabled - works with API key
+    GENERATIVE_AI_MODEL: str = "gemini-1.5-flash"  # Confirmed working model
+    
+    # Vertex AI Configuration (Fallback - currently not working for this project)
+    VERTEX_AI_LOCATION: str = "us-central1"
+    VERTEX_AI_MODEL: str = "gemini-1.5-flash"  # Not accessible via Vertex AI
     
     # Natural Language Query Settings
     ENABLE_MULTI_LANGUAGE: bool = True

@@ -53,9 +53,8 @@ const Sidebar = ({ isOpen, isMobile, onClose }) => {
 
   return (
     <aside className={`sidebar ${isMobile ? 'sidebar-mobile' : ''} ${isMobile && isOpen ? 'sidebar-open' : ''}`}>
-      {isMobile && (
+      {/* {isMobile && (
         <div className="sidebar-header">
-          <h3>Menu</h3>
           <button 
             className="close-button"
             onClick={onClose}
@@ -64,7 +63,7 @@ const Sidebar = ({ isOpen, isMobile, onClose }) => {
             <X size={20} />
           </button>
         </div>
-      )}
+      )} */}
       
       <nav className="sidebar-nav">
         <ul className="nav-list">

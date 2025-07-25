@@ -132,10 +132,10 @@ const UploadComponent = () => {
 
   return (
     <div className="upload-component">
-      <div className="upload-header">
+      {/* <div className="upload-header">
         <h2>Upload Receipt</h2>
         <p>Upload your receipt photos or videos to extract data automatically</p>
-      </div>
+      </div> */}
 
       {/* Upload Area */}
       <div

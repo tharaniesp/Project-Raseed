@@ -1,4 +1,4 @@
-// src/components/Layout/Sidebar.js
+// src/components/Layout/Sidebar.js - Updated with Step 4 Complete
 import React from 'react';
 import { NavLink } from 'react-router-dom';
 import { Upload, FileText, MessageSquare, BarChart3, Settings, X } from 'lucide-react';
@@ -23,9 +23,9 @@ const Sidebar = ({ isOpen, isMobile, onClose }) => {
       path: '/query', 
       icon: MessageSquare, 
       label: 'Query',
-      fullLabel: 'Ask Questions',
-      description: 'Query your data',
-      badge: 'Step 4'
+      fullLabel: 'AI Assistant',
+      description: 'Ask in any language',
+      // badge: 'NEW!'
     },
     { 
       path: '/analytics', 
@@ -33,7 +33,7 @@ const Sidebar = ({ isOpen, isMobile, onClose }) => {
       label: 'Analytics',
       fullLabel: 'Analytics',
       description: 'Spending insights',
-      badge: 'Soon'
+      // badge: 'Step 5'
     },
     { 
       path: '/settings', 
@@ -41,7 +41,7 @@ const Sidebar = ({ isOpen, isMobile, onClose }) => {
       label: 'Settings',
       fullLabel: 'Settings',
       description: 'App preferences',
-      badge: 'Soon'
+      // badge: 'Soon'
     }
   ];
 
@@ -89,7 +89,10 @@ const Sidebar = ({ isOpen, isMobile, onClose }) => {
                     )}
                   </div>
                   {item.badge && !isMobile && (
-                    <span className={`nav-badge ${item.badge === 'Soon' ? 'badge-gray' : 'badge-blue'}`}>
+                    <span className={`nav-badge ${
+                      item.badge === 'NEW!' ? 'badge-green' : 
+                      item.badge === 'Soon' ? 'badge-gray' : 'badge-blue'
+                    }`}>
                       {item.badge}
                     </span>
                   )}
@@ -100,21 +103,30 @@ const Sidebar = ({ isOpen, isMobile, onClose }) => {
         </ul>
       </nav>
       
-      {!isMobile && (
+      {/* {!isMobile && (
         <div className="sidebar-footer">
           <div className="current-step">
-            <h4>Current: Step 1</h4>
-            <p>Upload & Storage Complete</p>
+            <h4>Current: Step 4 Complete!</h4>
+            <p>🎉 Multi-Language AI Queries Active</p>
             <div className="progress-steps">
               <div className="step completed">1</div>
-              <div className="step">2</div>
-              <div className="step">3</div>
-              <div className="step">4</div>
+              <div className="step completed">2</div>
+              <div className="step completed">3</div>
+              <div className="step completed">4</div>
               <div className="step">5</div>
+            </div>
+            <div className="step-details">
+              <small>
+                ✅ Upload & Storage<br/>
+                ✅ AI Data Extraction<br/>
+                ✅ Wallet Pass Generation<br/>
+                ✅ Natural Language Queries<br/>
+                🔄 Insights & Notifications (Next)
+              </small>
             </div>
           </div>
         </div>
-      )}
+      )} */}
     </aside>
   );
 };

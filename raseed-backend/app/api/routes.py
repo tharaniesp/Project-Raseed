@@ -466,7 +466,7 @@ async def get_vertex_ai_status():
             ('googletrans', 'Google Translate')
         ]
         
-        for package, name in required_packages.items():
+        for package, name in required_packages:
             try:
                 __import__(package.replace('.', '_') if '.' in package else package)
                 packages_status[name] = True

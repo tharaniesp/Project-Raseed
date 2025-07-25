@@ -1577,7 +1577,477 @@ body {
 /* ====================================== */
 /* AUTO WALLET PASS STYLES */
 /* ====================================== */
+/* Enhanced CSS for Step 4 Features - Add to App.css */
 
+/* ====================================== */
+/* STEP 4: ENHANCED UI STYLES */
+/* ====================================== */
+
+/* New badge colors */
+.badge-green {
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: white;
+  font-size: 0.7rem;
+  padding: 0.2rem 0.6rem;
+  border-radius: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  box-shadow: 0 2px 4px rgba(16, 185, 129, 0.3);
+  animation: pulse-green 2s infinite;
+}
+
+@keyframes pulse-green {
+  0%, 100% { 
+    box-shadow: 0 2px 4px rgba(16, 185, 129, 0.3);
+    transform: scale(1);
+  }
+  50% { 
+    box-shadow: 0 4px 8px rgba(16, 185, 129, 0.5);
+    transform: scale(1.05);
+  }
+}
+
+/* Enhanced progress steps */
+.progress-steps {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.step {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: #e5e7eb;
+  color: #6b7280;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  font-weight: 600;
+  transition: all 0.3s ease;
+}
+
+.step.completed {
+  background: linear-gradient(135deg, #10b981, #059669);
+  color: white;
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.4);
+  transform: scale(1.1);
+}
+
+.step.completed:nth-child(4) {
+  animation: celebrate 1s ease-out;
+}
+
+@keyframes celebrate {
+  0% { transform: scale(1.1); }
+  50% { transform: scale(1.3) rotate(10deg); }
+  100% { transform: scale(1.1); }
+}
+
+/* Step details */
+.step-details {
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid #e5e7eb;
+}
+
+.step-details small {
+  line-height: 1.4;
+  color: #6b7280;
+}
+
+/* Status indicator enhancements */
+.status-indicator.vertex-ai {
+  background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+  color: white;
+  border: none;
+}
+
+.status-indicator.vertex-ai .status-dot {
+  background: #a78bfa;
+}
+
+/* Query interface enhancements */
+.query-type-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.75rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 12px;
+  font-weight: 600;
+}
+
+.query-type-cooking {
+  background: #fef3c7;
+  color: #92400e;
+}
+
+.query-type-shopping {
+  background: #d1fae5;
+  color: #065f46;
+}
+
+.query-type-inventory {
+  background: #dbeafe;
+  color: #1e40af;
+}
+
+.query-type-spending {
+  background: #e9d5ff;
+  color: #7c2d12;
+}
+
+/* Language selector styles */
+.language-selector {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  background: white;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.language-selector select {
+  border: none;
+  outline: none;
+  background: transparent;
+  font-size: 0.875rem;
+  cursor: pointer;
+}
+
+/* Voice input button */
+.voice-button {
+  position: relative;
+  overflow: hidden;
+}
+
+.voice-button.listening {
+  background: #ef4444 !important;
+  color: white !important;
+  animation: pulse-recording 1s infinite;
+}
+
+@keyframes pulse-recording {
+  0%, 100% { 
+    box-shadow: 0 0 0 0 rgba(239, 68, 68, 0.7);
+  }
+  50% { 
+    box-shadow: 0 0 0 10px rgba(239, 68, 68, 0);
+  }
+}
+
+/* Sample query cards */
+.sample-query-card {
+  background: #f9fafb;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  padding: 1rem;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.sample-query-card:hover {
+  background: #f3f4f6;
+  border-color: #3b82f6;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.sample-query-card.category-cooking:hover {
+  border-color: #f59e0b;
+  box-shadow: 0 4px 12px rgba(245, 158, 11, 0.2);
+}
+
+.sample-query-card.category-shopping:hover {
+  border-color: #10b981;
+  box-shadow: 0 4px 12px rgba(16, 185, 129, 0.2);
+}
+
+.sample-query-card.category-inventory:hover {
+  border-color: #3b82f6;
+  box-shadow: 0 4px 12px rgba(59, 130, 246, 0.2);
+}
+
+.sample-query-card.category-spending:hover {
+  border-color: #8b5cf6;
+  box-shadow: 0 4px 12px rgba(139, 92, 246, 0.2);
+}
+
+/* Message styling improvements */
+.message.assistant {
+  background: linear-gradient(135deg, #f8fafc, #f1f5f9);
+  border-left: 4px solid #3b82f6;
+}
+
+.message.user {
+  background: linear-gradient(135deg, #3b82f6, #2563eb);
+}
+
+.message.system {
+  background: linear-gradient(135deg, #f0fdf4, #dcfce7);
+  border-left: 4px solid #10b981;
+}
+
+.message.error {
+  background: linear-gradient(135deg, #fef2f2, #fee2e2);
+  border-left: 4px solid #ef4444;
+}
+
+/* Actionable items styling */
+.actionable-items {
+  background: rgba(255, 255, 255, 0.9);
+  border-radius: 6px;
+  padding: 0.75rem;
+  margin-top: 0.5rem;
+  border: 1px solid rgba(16, 185, 129, 0.2);
+}
+
+.actionable-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.25rem 0;
+  font-size: 0.8rem;
+}
+
+.actionable-item-quantity {
+  background: #10b981;
+  color: white;
+  padding: 0.1rem 0.4rem;
+  border-radius: 12px;
+  font-size: 0.7rem;
+  font-weight: 600;
+  min-width: 2rem;
+  text-align: center;
+}
+
+.actionable-item-category {
+  background: #f3f4f6;
+  color: #6b7280;
+  padding: 0.1rem 0.4rem;
+  border-radius: 12px;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  font-weight: 500;
+}
+
+/* Wallet pass creation button */
+.wallet-pass-button {
+  background: linear-gradient(135deg, #1a73e8, #4285f4);
+  color: white;
+  border: none;
+  border-radius: 6px;
+  padding: 0.5rem 1rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  width: 100%;
+  margin-top: 0.5rem;
+  box-shadow: 0 2px 8px rgba(26, 115, 232, 0.3);
+}
+
+.wallet-pass-button:hover {
+  background: linear-gradient(135deg, #1557b0, #3367d6);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(26, 115, 232, 0.4);
+}
+
+.wallet-pass-button:active {
+  transform: translateY(0);
+}
+
+/* Loading states */
+.loading-shimmer {
+  background: linear-gradient(90deg, #f0f0f0 25%, #e0e0e0 50%, #f0f0f0 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite;
+}
+
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+/* Status cards */
+.status-card {
+  background: white;
+  border-radius: 12px;
+  padding: 1.5rem;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+  border: 1px solid #e5e7eb;
+  transition: all 0.2s ease;
+}
+
+.status-card:hover {
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  transform: translateY(-2px);
+}
+
+.status-card.vertex-ai {
+  border-color: #8b5cf6;
+  background: linear-gradient(135deg, #faf5ff, #f3e8ff);
+}
+
+.status-card.language {
+  border-color: #10b981;
+  background: linear-gradient(135deg, #f0fdf4, #ecfdf5);
+}
+
+.status-card.statistics {
+  border-color: #f59e0b;
+  background: linear-gradient(135deg, #fffbeb, #fef3c7);
+}
+
+/* Confidence indicator */
+.confidence-indicator {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.confidence-high {
+  color: #10b981;
+}
+
+.confidence-medium {
+  color: #f59e0b;
+}
+
+.confidence-low {
+  color: #ef4444;
+}
+
+/* Language flag styling */
+.language-flag {
+  font-size: 1.2rem;
+  margin-right: 0.5rem;
+}
+
+/* Advanced features preview */
+.features-preview {
+  background: linear-gradient(135deg, #eff6ff, #f3e8ff);
+  border: 1px solid #c7d2fe;
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-top: 1.5rem;
+}
+
+.features-preview h4 {
+  background: linear-gradient(135deg, #3b82f6, #8b5cf6);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  font-weight: 700;
+  margin-bottom: 1rem;
+}
+
+.feature-list {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 0.5rem;
+}
+
+.feature-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.875rem;
+  color: #6b7280;
+}
+
+/* Responsive enhancements */
+@media (max-width: 768px) {
+  .badge-green {
+    font-size: 0.65rem;
+    padding: 0.15rem 0.4rem;
+  }
+  
+  .progress-steps .step {
+    width: 24px;
+    height: 24px;
+    font-size: 0.7rem;
+  }
+  
+  .sample-query-card {
+    padding: 0.75rem;
+  }
+  
+  .status-card {
+    padding: 1rem;
+  }
+  
+  .language-selector {
+    padding: 0.5rem;
+    gap: 0.25rem;
+  }
+  
+  .wallet-pass-button {
+    padding: 0.75rem 1rem;
+    font-size: 0.9rem;
+  }
+  
+  .features-preview {
+    padding: 1rem;
+  }
+  
+  .feature-list {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 480px) {
+  .step-details small {
+    font-size: 0.75rem;
+  }
+  
+  .badge-green {
+    display: none;
+  }
+  
+  .actionable-items {
+    padding: 0.5rem;
+  }
+  
+  .confidence-indicator {
+    font-size: 0.7rem;
+  }
+}
+
+/* Dark mode support (if implemented later) */
+@media (prefers-color-scheme: dark) {
+  .status-card {
+    background: #1f2937;
+    border-color: #374151;
+    color: #e5e7eb;
+  }
+  
+  .sample-query-card {
+    background: #1f2937;
+    border-color: #374151;
+    color: #e5e7eb;
+  }
+  
+  .features-preview {
+    background: linear-gradient(135deg, #1e293b, #334155);
+    border-color: #475569;
+  }
+}
+
+/* ====================================== */
+/* END STEP 4 STYLES */
+/* ====================================== */
 /* Status badges container */
 .status-badges {
   display: flex;

@@ -1,10 +1,13 @@
 // src/components/Layout/Header.js
 import React from 'react';
+import { useTheme } from '../../context/ThemeContext';
+import { Sun, Moon } from 'lucide-react';
 import { FileText, Menu, X } from 'lucide-react';
 import { useReceipt } from '../../context/ReceiptContext';
 
 const Header = ({ onMenuClick, isMobile }) => {
   const { backendStatus, totalReceipts } = useReceipt();
+  const { theme, toggleTheme } = useTheme();
 
   return (
     <header className="header">
@@ -43,12 +46,20 @@ const Header = ({ onMenuClick, isMobile }) => {
         </div>
         
       {!isMobile && (
-        <div className="header-actions">
+        <div className="header-actions" style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
           <div className="stats">
             <span className="receipt-count">
               {totalReceipts} Receipt{totalReceipts !== 1 ? 's' : ''}
             </span>
           </div>
+          <button
+            className="theme-toggle-btn"
+            onClick={toggleTheme}
+            aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+            style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+          >
+            {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
+          </button>
           <div className={`status-indicator ${backendStatus}`}>
             <div className={`status-dot ${backendStatus}`}></div>
             <span className="status-text">

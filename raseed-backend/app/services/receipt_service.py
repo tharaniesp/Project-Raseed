@@ -89,6 +89,7 @@ class ReceiptService:
                 "status": ReceiptStatus.UPLOADED.value,
                 "extracted_data": None,
                 "processing_error": None,
+                "user_id": "current_user",
                 "created_at": datetime.utcnow(),
                 "updated_at": datetime.utcnow()
             }

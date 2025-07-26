@@ -62,6 +62,7 @@ class ReceiptResponse(BaseModel):
     status: ReceiptStatus
     extracted_data: Optional[ExtractedData] = None
     processing_error: Optional[str] = None
+    user_id: Optional[str] = None
     created_at: datetime
     updated_at: datetime
 

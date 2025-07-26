@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import '../styles/LoginPage.css';
+const bgUrl = '/dark-glass-background.svg'; // new dark glass-style background
 
 const RegisterPage = ({ onRegister }) => {
   const [email, setEmail] = useState('');
@@ -29,7 +30,12 @@ const RegisterPage = ({ onRegister }) => {
   };
 
   return (
-    <div className="login-page">
+    <div className="login-page" style={{
+      background: `linear-gradient(rgba(0,0,0,0.45),rgba(0,0,0,0.45)), url(${bgUrl}) center/cover no-repeat`,
+    }}>
+      <div className="floating-shape circle1"></div>
+      <div className="floating-shape circle2"></div>
+      <div className="floating-shape hexagon"></div>
       <form className="login-form" onSubmit={handleSubmit}>
         <h2>Create Account</h2>
         {error && <div className="error">{error}</div>}

@@ -43,11 +43,11 @@ async def upload_receipt(file: UploadFile = File(...)):
 
 @receipt_router.get("/receipts", response_model=ReceiptListResponse)
 async def get_receipts(
-    limit: int = Query(10, ge=1, le=100, description="Number of receipts to return"),
+    limit: int = Query(20, ge=1, le=100, description="Number of receipts to return"),
     offset: int = Query(0, ge=0, description="Number of receipts to skip")
 ):
     """Get list of uploaded receipts"""
-    receipts = await ReceiptService.get_receipts(limit=limit, offset=offset)
+    receipts = await ReceiptService.get_receipts(limit=20, offset=offset)
     
     return ReceiptListResponse(
         receipts=receipts,

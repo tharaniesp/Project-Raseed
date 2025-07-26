@@ -6,6 +6,7 @@ from contextlib import asynccontextmanager
 from app.core.config import settings
 from app.core.database import initialize_firebase
 from app.api.routes import receipt_router, health_router
+from app.api.insights_routes import insights_router  # NEW: Import insights router
 from app.core.logging import setup_logging
 
 # Setup logging
@@ -40,8 +41,9 @@ app.add_middleware(
 )
 
 # Include routers
-app.include_router(health_router, prefix="/api", tags=["Health"])
+app.include_router(health_router, tags=["Health"])
 app.include_router(receipt_router, prefix="/api", tags=["Receipts"])
+app.include_router(insights_router, prefix="/api", tags=["Insights & Notifications"])  # NEW: Add insights router
 
 # Add a root-level health check for compatibility
 @app.get("/health")
@@ -51,7 +53,7 @@ async def root_health_check():
     return {
         "status": "healthy",
         "firebase_initialized": is_firebase_initialized(),
-        "timestamp": "2025-07-18T10:30:00Z"
+        "timestamp": "2025-07-26T10:30:00Z"
     }
 
 @app.get("/")
@@ -60,7 +62,9 @@ async def root():
     return {
         "message": f"{settings.PROJECT_NAME} API is running!",
         "version": settings.VERSION,
-        "docs": "/docs"
+        "docs": "/docs",
+        "features": [
+        ]
     }
 
 if __name__ == "__main__":

@@ -14,7 +14,7 @@ This service provides:
 """
 
 import logging
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Dict, List, Optional, Tuple
 from dataclasses import dataclass, asdict
 from enum import Enum
@@ -26,7 +26,8 @@ from collections import defaultdict, Counter
 
 # Core dependencies
 from app.core.config import settings
-from app.core.database import db
+from app.core.database import db, get_firestore_client, is_firebase_initialized
+from google.cloud.firestore_v1.base_query import FieldFilter
 
 logger = logging.getLogger(__name__)
 
@@ -632,28 +633,179 @@ class InsightsService:
         """Get optimization suggestions for a category"""
         return self._get_overspending_suggestions(category)
     
-    async def _get_user_receipts(self, user_id: str) -> List[Dict]:
-        """Fetch user's receipt data (mock implementation)"""
-        # In production, this would fetch from Firestore
-        # For now, return mock data
+    async def _get_user_receipts(self, user_id: str, days_back: int = 90) -> List[Dict]:
+        """Fetch user's receipt data from Firestore"""
+        try:
+            if not is_firebase_initialized():
+                self.logger.warning("Firebase not initialized, returning mock data")
+                return self._get_mock_receipts(user_id)
+            
+            db = get_firestore_client()
+            if not db:
+                self.logger.warning("Firestore client not available, returning mock data")
+                return self._get_mock_receipts(user_id)
+            
+            # Calculate date range - make them timezone-aware to match Firestore timestamps
+            end_date = datetime.now(timezone.utc)
+            start_date = end_date - timedelta(days=days_back)
+            
+            self.logger.info(f"📊 Fetching receipts for user {user_id} from {start_date.date()} to {end_date.date()}")
+            
+            # Query Firestore for receipts by user_id only
+            # We'll sort in memory to avoid requiring a composite index
+            query = (db.collection(settings.FIRESTORE_COLLECTION_RECEIPTS)
+                    .where(filter=FieldFilter('user_id', '==', user_id)))
+                    # .limit(100))  # Limit to recent 100 receipts to avoid large queries
+            
+            docs = query.stream()
+            all_receipts = []
+            
+            for doc in docs:
+                data = doc.to_dict()
+                data['receipt_id'] = doc.id
+                
+                # Convert Firestore timestamp to datetime if needed
+                if 'created_at' in data and hasattr(data['created_at'], 'to_datetime'):
+                    data['date'] = data['created_at'].to_datetime()
+                elif 'created_at' in data:
+                    data['date'] = data['created_at']
+                else:
+                    data['date'] = datetime.now(timezone.utc)
+                
+                # Filter by date range in memory (since we can't use composite index)
+                receipt_date = data['date']
+                if isinstance(receipt_date, str):
+                    try:
+                        receipt_date = datetime.fromisoformat(receipt_date.replace('Z', '+00:00'))
+                    except:
+                        receipt_date = datetime.now(timezone.utc)
+                
+                # Ensure receipt_date is timezone-aware for comparison
+                if receipt_date.tzinfo is None:
+                    receipt_date = receipt_date.replace(tzinfo=timezone.utc)
+                
+                if start_date <= receipt_date <= end_date:
+                    # Ensure required fields exist
+                    data.setdefault('merchant', 'Unknown Merchant')
+                    data.setdefault('category', 'general')
+                    data.setdefault('total', data.get('amount', 0.0))
+                    data.setdefault('items', data.get('parsed_items', []))
+                    
+                    all_receipts.append(data)
+            
+            receipts = all_receipts
+            
+            # Sort by date in memory (most recent first)
+            receipts.sort(key=lambda x: x.get('date', datetime.min.replace(tzinfo=timezone.utc)), reverse=True)
+            
+            self.logger.info(f"✅ Fetched {len(receipts)} receipts from Firestore for user {user_id}")
+            
+            # If no receipts found, return a small sample of mock data for demonstration
+            if not receipts:
+                self.logger.info(f"No receipts found for user {user_id}, returning sample data")
+                # return self._get_mock_receipts(user_id)
+            
+            return receipts
+            
+        except Exception as e:
+            self.logger.error(f"❌ Error fetching receipts from Firestore: {e}")
+            self.logger.info("Falling back to mock data")
+            # return self._get_mock_receipts(user_id)
+    
+    def _get_mock_receipts(self, user_id: str) -> List[Dict]:
+        """Return mock receipt data for development/fallback"""
         return [
             {
                 "receipt_id": "rec_001",
+                "user_id": user_id,
                 "date": datetime.now() - timedelta(days=5),
                 "merchant": "Big Bazaar",
                 "category": "groceries",
                 "total": 850.0,
-                "items": ["Rice", "Dal", "Oil"]
+                "amount": 850.0,
+                "items": ["Rice", "Dal", "Oil"],
+                "parsed_items": [
+                    {"name": "Rice", "price": 120.0, "quantity": "5kg"},
+                    {"name": "Dal", "price": 180.0, "quantity": "1kg"},
+                    {"name": "Oil", "price": 550.0, "quantity": "1L"}
+                ]
             },
             {
-                "receipt_id": "rec_002", 
+                "receipt_id": "rec_002",
+                "user_id": user_id, 
                 "date": datetime.now() - timedelta(days=10),
                 "merchant": "Cafe Coffee Day",
                 "category": "dining",
                 "total": 180.0,
-                "items": ["Coffee", "Sandwich"]
+                "amount": 180.0,
+                "items": ["Coffee", "Sandwich"],
+                "parsed_items": [
+                    {"name": "Coffee", "price": 90.0, "quantity": "1"},
+                    {"name": "Sandwich", "price": 90.0, "quantity": "1"}
+                ]
+            },
+            {
+                "receipt_id": "rec_003",
+                "user_id": user_id,
+                "date": datetime.now() - timedelta(days=15),
+                "merchant": "Reliance Digital",
+                "category": "electronics",
+                "total": 2500.0,
+                "amount": 2500.0,
+                "items": ["Phone Cable", "Power Bank"],
+                "parsed_items": [
+                    {"name": "Phone Cable", "price": 500.0, "quantity": "1"},
+                    {"name": "Power Bank", "price": 2000.0, "quantity": "1"}
+                ]
+            },
+            {
+                "receipt_id": "rec_004",
+                "user_id": user_id,
+                "date": datetime.now() - timedelta(days=20),
+                "merchant": "DMart",
+                "category": "groceries", 
+                "total": 1200.0,
+                "amount": 1200.0,
+                "items": ["Vegetables", "Fruits", "Milk"],
+                "parsed_items": [
+                    {"name": "Vegetables", "price": 400.0, "quantity": "2kg"},
+                    {"name": "Fruits", "price": 300.0, "quantity": "1kg"},
+                    {"name": "Milk", "price": 500.0, "quantity": "5L"}
+                ]
+            },
+            {
+                "receipt_id": "rec_005",
+                "user_id": user_id,
+                "date": datetime.now() - timedelta(days=25),
+                "merchant": "Zomato",
+                "category": "dining",
+                "total": 450.0,
+                "amount": 450.0,
+                "items": ["Pizza", "Coke"],
+                "parsed_items": [
+                    {"name": "Pizza", "price": 350.0, "quantity": "1"},
+                    {"name": "Coke", "price": 100.0, "quantity": "2"}
+                ]
             }
         ]
+    
+    async def _get_user_receipts_by_category(self, user_id: str, category: str, days_back: int = 90) -> List[Dict]:
+        """Fetch user's receipts filtered by category from Firestore"""
+        try:
+            all_receipts = await self._get_user_receipts(user_id, days_back)
+            return [receipt for receipt in all_receipts if receipt.get('category', '').lower() == category.lower()]
+        except Exception as e:
+            self.logger.error(f"❌ Error fetching receipts by category: {e}")
+            return []
+    
+    async def _get_user_receipts_by_merchant(self, user_id: str, merchant: str, days_back: int = 90) -> List[Dict]:
+        """Fetch user's receipts filtered by merchant from Firestore"""
+        try:
+            all_receipts = await self._get_user_receipts(user_id, days_back)
+            return [receipt for receipt in all_receipts if merchant.lower() in receipt.get('merchant', '').lower()]
+        except Exception as e:
+            self.logger.error(f"❌ Error fetching receipts by merchant: {e}")
+            return []
     
     def _get_fallback_insights(self, user_id: str, limit: int) -> List[Dict]:
         """Return fallback insights when generation fails"""

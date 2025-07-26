@@ -1611,3 +1611,6 @@ class InsightsService:
                 "total_passes": sum(len(passes) for passes in self._wallet_passes_cache.values())
             }
         }
+
+# Global instance
+insights_service = InsightsService()

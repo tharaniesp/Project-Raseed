@@ -20,11 +20,11 @@ class Settings(BaseSettings):
     ALLOWED_ORIGINS: List[str] = ["*"]  # Allow all origins in development
     
     # Firebase Configuration
-    FIREBASE_PROJECT_ID: str = "project-raseed-b380d"
-    FIREBASE_PRIVATE_KEY: str = "-----BEGIN PRIVATE KEY-----\nMIIEvgIBADANBgkqhkiG9w0BAQEFAASCBKgwggSkAgEAAoIBAQDPEyIDZbf13Uxd\nfftobTr37cCAlzJQV6cd1HsHMCDU4EajPJDPoyrVJ18cIOpO/y1Ku5bu4LHIGVSc\nk7whidFRFBVFp8Nzv21feFVhSHObYmcYD4ASdXm2Wgr3r+g5ivvQDyIQfzCjfoCa\n4Va5nFmxrxLkd+SStkjYgOv6WLLjbhAYjoKtHNuQBv5o4SPBpwPMWywOsjkjM6fH\ncJJG12HdH9Ha5+yDBCs2xomaaXNN3eJpasl2+2sePoVIaxx2bNZc0YsJQO9wR+5J\nQN721BuA5NYRzSsk8yhsB3XZshnQsU6S/7vj65FEOSHc81BLAWwAih6Cgmnc/koa\ntc0/UVLhAgMBAAECggEABUYLF4EkIMQf5/YiRy1X+KeICmZUsFMzz6NL4PnGw5vK\nGhRmlOPRM+WUAHet9pt8/BfKrwmkfBskCor1z2NZhAoh8A4Rli2C/oZQ+KsovDrI\nHhwKnT27aauBob+hEgfCJGZ27eq1UrFGhcXqczaXhK+icynYAFdZg9UFstCb5AWW\nRd+t29cQidsCub3Y+Ldw/ZIJkQwgmSQdJYFqQzf+vkJSCVmXjCgy8tTX8QhpcGtE\n7QSTMPnQ1egQrRD/KLYCXBVGFGBW0+Op+Aj+nRNZ4tuDts9UZ9Ta/cgw5H+MI+OC\nFtigEG4noV9LLbQqhKcg//v+nTmhkyOtko/EiZsWyQKBgQDxGbDJnTGv+1qjn5Je\nQPYIvY2EhX/dnyryWzjg8atruBLvbYuKbEOqCg0/+gB9YyPfZDCkUFQmfHm5ZGNs\ntLt3Dom8sSUeEv3mYvP6y7iVx+A+c1cQcPon+Dot7ckT0Y0NDhI1OqCVVPSKULLD\nh6+P5L+/GMJmbj5yY/uBpdkKmQKBgQDb3ySGHg+HCK36b9l8LtS5o4prnv+NmS5Q\nNgUMahM9sKzZEgJH6XQwAXUWPLppEySCA7mjDNiLlNrtoJRhIs1fa2B+ohOX6eCY\nsxH2r1Cfrrfgtod0WVKSXgg3b5qSuj6E/bb7EBoAXABfy0pJmM3dSuyX9t/dRp04\n/bxh+Wc/iQKBgQDnwY87rlv10wLkp94VthIKgtMHISCxU2//+YoqSIREDnQ9LKrm\ny30bdYAZEGLqJKN1+CP9vq21NQ/5ErOz6eMN5a6m8A1C5HSlwlbOrIdpivFWdp6p\nUkBUrXqXbaxM3bDdbLo56no0Ma7DSiEcbVBoXDWpJs6vkad7Y/p+PILueQKBgGpT\n3ejR7rZhlykOIAGy8AKaON1Utcb3NfNqPETFo2po3x3WXK4EEsEIY2QOmCMqM7SA\nMqzMEIhnwvu5dSgIWYL0fWSf4pPLcWbG6j/+hiHCr3+HJbg5XfoUaSrN2NVuJb/Q\npkWBguF7nF63A8TVlXCXxBS1OYtbk7q00f4bSzfpAoGBAJS74UiUcBq2RGLxFknJ\nxeifu5AB+zrIjomTTULkM47Z5Wfy4vuxjOBafF22esOqxe9hyPZlGmEnBTYP2gs1\nZpoOwV6PmZ1TU3R2vaFDSNpBb1T9oDc1IOdEEm6E0u0vGrP+SZPbFuuRhPbQSJms\nSgAk50QedXy8Zd7VNMYz3Ymv\n-----END PRIVATE KEY-----\n"
-    FIREBASE_CLIENT_EMAIL: str = "firebase-adminsdk-fbsvc@project-raseed-b380d.iam.gserviceaccount.com"
-    FIREBASE_STORAGE_BUCKET: str = "project-raseed-b380d.firebasestorage.app"
-    FIREBASE_SERVICE_ACCOUNT_PATH: str = "firebase-service-account.json"
+    FIREBASE_PROJECT_ID: str = ""
+    FIREBASE_PRIVATE_KEY: str = ""
+    FIREBASE_CLIENT_EMAIL: str = ""
+    FIREBASE_STORAGE_BUCKET: str = ""
+    FIREBASE_SERVICE_ACCOUNT_PATH: str = ""
     
     # File Upload Settings
     MAX_FILE_SIZE: int = 10 * 1024 * 1024  # 10MB
@@ -34,7 +34,7 @@ class Settings(BaseSettings):
     ]
     
     # AI/ML Configuration (Step 2)
-    GEMINI_API_KEY: str = "AIzaSyDc07PX6qoo0XpEfOE1UERcnsF0lOXL8Mk"
+    GEMINI_API_KEY: str = ""
     OPENAI_API_KEY: str = ""
     
     # AI Processing Settings
@@ -57,8 +57,18 @@ class Settings(BaseSettings):
     MAX_QUERY_CACHE_SIZE: int = 100
     
     # Google Wallet Configuration (Step 3)
-    GOOGLE_WALLET_ISSUER_ID: str = "3388000000022971806"
+    GOOGLE_WALLET_ISSUER_ID: str = ""
     AUTO_GENERATE_WALLET_PASS: bool = True 
+    
+    # Document AI Configuration (Enhanced Receipt Processing)
+    DOCUMENT_AI_LOCATION: str = "us"
+    DOCUMENT_AI_RECEIPT_PROCESSOR_ID: str = ""
+    DOCUMENT_AI_INVOICE_PROCESSOR_ID: str = ""
+    DOCUMENT_AI_FORM_PROCESSOR_ID: str = ""
+    
+    # Google Cloud Configuration
+    GOOGLE_CLOUD_PROJECT: str = ""
+    GOOGLE_APPLICATION_CREDENTIALS: str = ""
     
     # Database
     FIRESTORE_COLLECTION_RECEIPTS: str = "receipts"

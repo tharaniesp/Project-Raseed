@@ -501,7 +501,7 @@ body {
   line-height: 1.6;
   color: var(--color-logo-dark);
   transition: color 0.2s;
-  overflow: hidden;
+  overflow-x: hidden;
 
   [data-theme='dark'] .logo {
     color: var(--color-logo-dark);
@@ -522,19 +522,22 @@ body {
   display: flex;
   flex-direction: column;
   background: var(--color-bg);
+  overflow: hidden;
 }
 
 .app-body {
   flex: 1;
   display: flex;
+  overflow: hidden;
 }
 
 .main-content {
   flex: 1;
   padding: 2rem;
   background: var(--color-main-bg);
-  max-height: calc(100vh - 64px);
   overflow-y: auto;
+  overflow-x: hidden;
+  min-height: 0;
 }
 
 .logo {
@@ -2707,44 +2710,59 @@ a:hover, .nav-link:hover {
 
 /* Small screens (tablets portrait, large phones) */
 @media (max-width: 768px) {
-  body {
-      .app-body {
+  .app-body {
     flex-direction: column;
   }
   
+  .main-content {
+    padding: 1rem;
+    order: 1;
+  }
+  
   .sidebar {
-    width: 25%;
+    width: 100%;
     order: 2;
     border-right: none;
     border-top: 1px solid #e5e7eb;
     padding: 0;
     background: #f9fafb;
+    height: auto;
+    max-height: 60px;
   }
   
   .sidebar-nav {
     display: flex;
     overflow-x: auto;
-    /* padding: 0.5rem; */
+    padding: 0.5rem;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  
+  .sidebar-nav::-webkit-scrollbar {
+    display: none;
   }
   
   .nav-list {
-    /* display: flex; */
+    display: flex;
     gap: 0.5rem;
     min-width: max-content;
+    align-items: center;
   }
   
   .nav-item {
     margin-bottom: 0;
+    flex-shrink: 0;
   }
   
   .nav-link {
     flex-direction: column;
-    padding: 0.75rem 1rem;
-    min-width: 100px;
+    padding: 0.5rem 0.75rem;
+    min-width: 80px;
     text-align: center;
     border-right: none;
     border-radius: 8px;
     white-space: nowrap;
+    font-size: 0.8rem;
   }
   
   .nav-content {
@@ -2763,6 +2781,7 @@ a:hover, .nav-link:hover {
     order: 1;
     padding: 1rem;
     max-height: calc(100vh - 64px - 60px);
+    overflow-y: auto;
   }
   
   .header {
@@ -2906,7 +2925,7 @@ a:hover, .nav-link:hover {
   }
 
   }
-}
+
 
 /* Extra small screens (phones) */
 @media (max-width: 480px) {
@@ -2922,6 +2941,7 @@ a:hover, .nav-link:hover {
   .main-content {
     padding: 0.75rem;
     max-height: calc(100vh - 56px - 60px);
+    overflow-y: auto;
   }
   
   .page-header {

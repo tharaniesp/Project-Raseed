@@ -34,6 +34,12 @@ class QueryService:
                 request.context = {}
             request.context['query_id'] = query_id
             
+            # Check if receipt data is provided in context from frontend
+            if request.context and request.context.get('receipts_data'):
+                logger.info(f"📊 Using receipt data from frontend context: {len(request.context['receipts_data'])} receipts")
+                # Pass the receipt data to the agent service
+                request.context['use_frontend_receipts'] = True
+            
             # Process with Vertex AI Agent
             response = await vertex_ai_agent_service.process_query(request)
             

@@ -5,7 +5,7 @@ from contextlib import asynccontextmanager
 
 from app.core.config import settings
 from app.core.database import initialize_firebase
-from app.api.routes import receipt_router, health_router
+from app.api.routes import receipt_router, health_router, websocket_router
 from app.api.insights_routes import insights_router  # NEW: Import insights router
 from app.core.logging import setup_logging
 
@@ -36,12 +36,15 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=settings.ALLOWED_ORIGINS,
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD", "PATCH"],
     allow_headers=["*"],
+    expose_headers=["*"],
+    max_age=86400,  # Cache preflight requests for 24 hours
 )
 
 # Include routers
 app.include_router(health_router, tags=["Health"])
+app.include_router(websocket_router, tags=["WebSocket"])  # NEW: Add WebSocket router
 app.include_router(receipt_router, prefix="/api", tags=["Receipts"])
 app.include_router(insights_router, prefix="/api", tags=["Insights & Notifications"])  # NEW: Add insights router
 

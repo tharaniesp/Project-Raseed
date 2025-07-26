@@ -167,49 +167,106 @@ class VertexAIAgentService:
         return QueryType.GENERAL
     
     async def get_user_receipt_data(self, user_id: Optional[str], days_back: int = 14) -> List[Dict]:
-        """Get user's recent receipt data for context"""
+        """Get user's recent receipt data for context from Firestore"""
         try:
-            # Get recent receipts (last 2 weeks by default)
-            receipts = await ReceiptService.get_receipts(limit=50, offset=0)
+            # Use insights service to get real receipt data from Firestore
+            from app.services.insights_service import insights_service
             
-            # Filter processed receipts with extracted data
+            # Get real receipt data from Firestore
+            receipts_data = await insights_service._get_user_receipts(user_id or "current_user", days_back)
+            
+            # Transform the data to match expected format
             relevant_receipts = []
-            cutoff_date = datetime.now() - timedelta(days=days_back)
             
-            for receipt in receipts:
-                if (receipt.extracted_data and 
-                    receipt.created_at >= cutoff_date):
-                    
-                    receipt_data = {
-                        'date': receipt.extracted_data.receipt_date or receipt.created_at.strftime('%Y-%m-%d'),
-                        'merchant': receipt.extracted_data.merchant_name,
-                        'total': receipt.extracted_data.total_amount,
-                        'items': []
-                    }
-                    
-                    for item in receipt.extracted_data.items:
-                        receipt_data['items'].append({
-                            'name': item.name,
-                            'quantity': item.quantity,
-                            'category': item.category,
-                            'price': item.total_price
-                        })
-                    
-                    relevant_receipts.append(receipt_data)
+            for receipt in receipts_data:
+                receipt_data = {
+                    'receipt_id': receipt.get('receipt_id', ''),
+                    'date': receipt.get('date', datetime.now()).strftime('%Y-%m-%d') if hasattr(receipt.get('date'), 'strftime') else str(receipt.get('date', datetime.now())),
+                    'merchant': receipt.get('merchant', 'Unknown Merchant'),
+                    'category': receipt.get('category', 'general'),
+                    'total': receipt.get('total', receipt.get('amount', 0.0)),
+                    'items': []
+                }
+                
+                # Handle different item formats
+                items = receipt.get('items', [])
+                parsed_items = receipt.get('parsed_items', [])
+                
+                if parsed_items:
+                    # Use parsed items if available
+                    for item in parsed_items:
+                        if isinstance(item, dict):
+                            receipt_data['items'].append({
+                                'name': item.get('name', 'Unknown Item'),
+                                'quantity': item.get('quantity', '1'),
+                                'category': item.get('category', 'other'),
+                                'price': item.get('price', 0.0)
+                            })
+                elif items:
+                    # Use simple items list
+                    for item in items:
+                        if isinstance(item, str):
+                            receipt_data['items'].append({
+                                'name': item,
+                                'quantity': '1',
+                                'category': 'other',
+                                'price': 0.0
+                            })
+                        elif isinstance(item, dict):
+                            receipt_data['items'].append({
+                                'name': item.get('name', 'Unknown Item'),
+                                'quantity': item.get('quantity', '1'),
+                                'category': item.get('category', 'other'),
+                                'price': item.get('price', 0.0)
+                            })
+                
+                relevant_receipts.append(receipt_data)
             
-            logger.info(f"📊 Retrieved {len(relevant_receipts)} recent receipts for analysis")
+            logger.info(f"📊 Retrieved {len(relevant_receipts)} real receipts from Firestore for analysis")
             return relevant_receipts
             
         except Exception as e:
-            logger.error(f"❌ Failed to get receipt data: {e}")
+            logger.error(f"❌ Failed to get receipt data from Firestore: {e}")
+            # Fallback to empty list
             return []
     
     def create_context_prompt(self, query: str, receipts_data: List[Dict], query_type: QueryType) -> str:
-        """Create context-aware prompt for the AI agent"""
+        """Create context-aware prompt for the AI agent with real receipt data"""
         
-        # Create a summary of available items
+        if not receipts_data:
+            return f"""
+            You are a helpful shopping and cooking assistant. The user has no recent receipt data available.
+
+            USER QUERY: {query}
+            QUERY TYPE: {query_type.value}
+
+            Instructions based on query type:
+            {self._get_type_specific_instructions(query_type)}
+
+            RESPONSE FORMAT:
+            - Provide a helpful, natural response
+            - If suggesting shopping items, format as: "SHOPPING_LIST: item1, item2, item3"
+            - If providing cooking suggestions, be specific about recipes
+            - Since no receipt data is available, provide general advice
+            """
+        
+        # Create a comprehensive summary of available items and spending patterns
         all_items = []
+        merchant_spending = {}
+        category_spending = {}
+        total_spending = 0
+        
         for receipt in receipts_data:
+            merchant = receipt.get('merchant', 'Unknown')
+            category = receipt.get('category', 'general')
+            total = receipt.get('total', 0)
+            
+            # Track spending by merchant and category
+            merchant_spending[merchant] = merchant_spending.get(merchant, 0) + total
+            category_spending[category] = category_spending.get(category, 0) + total
+            total_spending += total
+            
+            # Collect all items
             all_items.extend(receipt.get('items', []))
         
         # Group items by category
@@ -220,27 +277,55 @@ class VertexAIAgentService:
                 categories[category] = []
             categories[category].append(item['name'])
         
+        # Create spending summary
+        spending_summary = f"""
+        SPENDING SUMMARY (Last {len(receipts_data)} receipts):
+        - Total Spent: ₹{total_spending:.2f}
+        - Top Merchants: {', '.join([f"{m} (₹{amt:.0f})" for m, amt in sorted(merchant_spending.items(), key=lambda x: x[1], reverse=True)[:3]])}
+        - Top Categories: {', '.join([f"{c} (₹{amt:.0f})" for c, amt in sorted(category_spending.items(), key=lambda x: x[1], reverse=True)[:3]])}
+        """
+        
+        # Create detailed receipt summary
+        receipt_summary = "RECENT RECEIPTS:\n"
+        for i, receipt in enumerate(receipts_data[-5:], 1):  # Last 5 receipts
+            receipt_summary += f"""
+            Receipt {i}:
+            - Date: {receipt.get('date', 'Unknown')}
+            - Merchant: {receipt.get('merchant', 'Unknown')}
+            - Category: {receipt.get('category', 'general')}
+            - Total: ₹{receipt.get('total', 0):.2f}
+            - Items: {', '.join([item.get('name', 'Unknown') for item in receipt.get('items', [])[:5]])}
+            """
+        
         context = f"""
-        You are a helpful shopping and cooking assistant. The user has the following items from their recent purchases (last 2 weeks):
+        You are a helpful shopping and cooking assistant with access to the user's real receipt data from their recent purchases.
+
+        {spending_summary}
 
         AVAILABLE ITEMS BY CATEGORY:
         {json.dumps(categories, indent=2)}
 
-        RECENT RECEIPTS:
-        {json.dumps(receipts_data[-5:], indent=2)}  # Last 5 receipts for context
+        {receipt_summary}
 
         USER QUERY: {query}
         QUERY TYPE: {query_type.value}
 
         Instructions based on query type:
-        
         {self._get_type_specific_instructions(query_type)}
 
+        IMPORTANT CONTEXT:
+        - Use the actual receipt data to provide personalized responses
+        - Consider their spending patterns and preferences
+        - Reference specific merchants they frequently visit
+        - Suggest items based on what they typically buy
+        - Consider their budget based on their spending history
+
         RESPONSE FORMAT:
-        - Provide a helpful, natural response
+        - Provide a helpful, natural response based on their actual data
         - If suggesting shopping items, format as: "SHOPPING_LIST: item1, item2, item3"
-        - If providing cooking suggestions, be specific about recipes
+        - If providing cooking suggestions, be specific about recipes using their available items
         - Always be practical and consider what the user already has
+        - Reference their spending patterns when relevant
         """
         
         return context
@@ -421,8 +506,16 @@ class VertexAIAgentService:
             logger.info(f"📊 Classified as: {query_type.value}")
             
             # Get user's receipt data for context
-            receipts_data = await self.get_user_receipt_data(request.user_id)
-            logger.info(f"📊 Retrieved {len(receipts_data)} recent receipts")
+            receipts_data = []
+            
+            # Check if receipt data is provided from frontend context
+            if request.context and request.context.get('use_frontend_receipts') and request.context.get('receipts_data'):
+                logger.info(f"📊 Using receipt data from frontend context: {len(request.context['receipts_data'])} receipts")
+                receipts_data = request.context['receipts_data']
+            else:
+                # Fallback to fetching from Firestore
+                receipts_data = await self.get_user_receipt_data(request.user_id)
+                logger.info(f"📊 Retrieved {len(receipts_data)} recent receipts from Firestore")
             
             # Create context prompt
             context_prompt = await self.create_enhanced_context_prompt(english_query, receipts_data, query_type)

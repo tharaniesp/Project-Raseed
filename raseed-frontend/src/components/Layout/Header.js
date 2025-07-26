@@ -5,6 +5,7 @@ import { Sun, Moon, LogOut } from 'lucide-react';
 import { FileText, Menu, X } from 'lucide-react';
 import { useReceipt } from '../../context/ReceiptContext';
 import { useAuth } from '../../context/AuthContext';
+import NotificationCenter from './NotificationCenter';
 
 const Header = ({ onMenuClick, isMobile }) => {
   const { backendStatus, totalReceipts } = useReceipt();
@@ -69,6 +70,7 @@ const Header = ({ onMenuClick, isMobile }) => {
               </span>
             </div>
           )}
+          <NotificationCenter />
           <button
             className="theme-toggle-btn"
             onClick={toggleTheme}

@@ -21,6 +21,9 @@ google-cloud-discoveryengine==0.11.0
 google-cloud-dialogflow-cx==1.26.0
 google-api-core==2.15.0
 
+# Document AI for enhanced receipt processing
+google-cloud-documentai==2.20.2
+
 # Enhanced NLP support
 langdetect==1.0.9
 googletrans==4.0.2

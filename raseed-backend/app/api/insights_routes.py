@@ -61,6 +61,11 @@ async def get_user_insights(
             detail=f"Failed to generate insights: {str(e)}"
         )
 
+@insights_router.options("/insights/{user_id}")
+async def options_insights(user_id: str):
+    """Handle OPTIONS request for insights endpoint"""
+    return {"message": "OK"}
+
 @insights_router.post("/insights/generate/{user_id}")
 async def generate_insights(
     user_id: str = Path(..., description="User ID to generate insights for"),

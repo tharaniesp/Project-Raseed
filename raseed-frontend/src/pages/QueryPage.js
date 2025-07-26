@@ -8,8 +8,10 @@ import {
   Sparkles, Zap
 } from 'lucide-react';
 import { receiptService } from '../services/receiptService';
+import { useReceipt } from '../context/ReceiptContext';
 
 const QueryPage = () => {
+  const { receipts, loading: receiptsLoading, error: receiptsError } = useReceipt();
   const [query, setQuery] = useState('');
   const [messages, setMessages] = useState([]);
   const [loading, setLoading] = useState(false);
@@ -133,10 +135,29 @@ const QueryPage = () => {
     setLoading(true);
 
     try {
+      // Prepare receipt data for the AI agent
+      const receiptData = receipts.map(receipt => ({
+        receipt_id: receipt.id,
+        date: receipt.created_at,
+        merchant: receipt.extracted_data?.merchant_name || 'Unknown Merchant',
+        category: receipt.extracted_data?.category || 'general',
+        total: receipt.extracted_data?.total_amount || 0,
+        items: receipt.extracted_data?.items || []
+      }));
+
+      console.log('📊 Sending receipt data to AI agent:', {
+        receiptsCount: receipts.length,
+        receiptData: receiptData
+      });
+
       const response = await receiptService.processNaturalLanguageQuery({
         query: query,
         language: selectedLanguage === 'auto' ? null : selectedLanguage,
-        user_id: 'current_user'
+        user_id: 'current_user',
+        context: {
+          receipts_data: receiptData,
+          receipts_count: receipts.length
+        }
       });
 
       const aiMessage = {
@@ -280,6 +301,22 @@ const QueryPage = () => {
         <p className="page-description">
           Ask questions about your receipts in any language and get smart insights
         </p>
+      </div>
+
+      {/* Debug Info */}
+      <div style={{
+        background: 'linear-gradient(135deg, #fef2f2, #fee2e2)',
+        border: '1px solid #fca5a5',
+        borderRadius: '12px',
+        padding: '1rem',
+        marginBottom: '1rem',
+        fontSize: '0.875rem'
+      }}>
+        <strong>🔍 Debug Info:</strong> 
+        Receipts Loading: {receiptsLoading.toString()}, 
+        Receipts Error: {receiptsError || 'none'}, 
+        Receipts Count: {receipts.length}, 
+        Receipts with Data: {receipts.filter(r => r.extracted_data).length}
       </div>
 
       {/* Status Dashboard */}

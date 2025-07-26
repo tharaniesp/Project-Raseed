@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import RegisterPage from './RegisterPage';
 import '../styles/LoginPage.css';
-const bgUrl = 'https://images.unsplash.com/photo-1506744038136-46273834b3fb?auto=format&fit=crop&w=1200&q=80'; // wallet/money bg
+const bgUrl = '/dark-glass-background.svg'; // new dark glass-style background
 
 const LoginPage = () => {
   const { login } = useAuth();
@@ -46,9 +46,13 @@ const LoginPage = () => {
       display: 'flex',
       alignItems: 'center',
       justifyContent: 'center',
+      position: 'relative'
     }}>
+      <div className="floating-shape circle1"></div>
+      <div className="floating-shape circle2"></div>
+      <div className="floating-shape hexagon"></div>
       <form className="login-form" onSubmit={handleSubmit} style={{ boxShadow: '0 4px 32px rgba(0,0,0,0.13)' }}>
-        <h2 style={{ marginBottom: '0.5rem', fontWeight: 700 }}>Sign In</h2>
+        <h2 style={{ marginBottom: '0.5rem', fontWeight: 700, color: "#1e1e2f" }}>Sign In</h2>
         <p style={{ color: '#6b7280', marginBottom: '1rem', textAlign: 'center' }}>Welcome to your smart wallet</p>
         {error && <div className="error">{error}</div>}
         <input

@@ -24,7 +24,7 @@ const Header = ({ onMenuClick, isMobile }) => {
           )}
         <a href="/" className="logo">
           <span className="logo-icon" style={{ display: 'flex', alignItems: 'center' }}>
-        <svg width={isMobile ? 40 : 60} height={isMobile ? 30 : 50} viewBox="40 40 140 70" xmlns="http://www.w3.org/2000/svg" font-family="Arial, sans-serif">
+        <svg width={isMobile ? 40 : 35} height={isMobile ? 30 : 35} viewBox="120 45 60 60" xmlns="http://www.w3.org/2000/svg" font-family="Arial, sans-serif">
           <g stroke="#2e7d32" fill="none" stroke-width="4">
             <path d="M40,40 l0,70 l60,0 l0,-70 l-6,6 l-6,-6 l-6,6 l-6,-6 l-6,6 l-6,-6 l-6,6 l-6,-6 z"/>
             <line x1="48" y1="60" x2="92" y2="60" stroke-width="3"/>
@@ -60,12 +60,12 @@ const Header = ({ onMenuClick, isMobile }) => {
           >
             {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
           </button>
-          <div className={`status-indicator ${backendStatus}`}>
+          {/* <div className={`status-indicator ${backendStatus}`}>
             <div className={`status-dot ${backendStatus}`}></div>
             <span className="status-text">
               {backendStatus === 'online' ? 'Backend Online' : 'Backend Offline'}
             </span>
-          </div>
+          </div> */}
         </div>
       )}
       </div>

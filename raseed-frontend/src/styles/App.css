@@ -4,6 +4,10 @@
   --color-logo-light: #f3f4f6;
   --color-theme-icon: #f59e42;
   --color-theme-icon-dark: #fbbf24;
+  --color-sidebar-active: #eff6ff;
+  --color-sidebar-hover: #f3f4f6;
+  --color-sidebar-text: #1d4ed8;
+  --color-sidebar-hover-text: #374151;
 }
 
 [data-theme='dark'] {
@@ -12,6 +16,10 @@
   --color-logo-light: #1f2937;
   --color-theme-icon: #fbbf24;
   --color-theme-icon-dark: #f59e42;
+  --color-sidebar-active: #1f2937;
+  --color-sidebar-hover: #2d3748;
+  --color-sidebar-text: #f8fafc;
+  --color-sidebar-hover-text: #e2e8f0;
 }
 /* Theme Variables */
 :root {
@@ -43,7 +51,7 @@
 }
 /* Header Styles */
 .header {
-  background: #fff;
+  background: #e5e7eb;
   border-bottom: 1px solid #e5e7eb;
   padding: 0 2rem;
   height: 70px;
@@ -234,7 +242,7 @@
 }
 
 .nav-link.active {
-  background: #eff6ff;
+  background: var(--color-sidebar-active);
   color: #1d4ed8;
   border-right-color: #3b82f6;
 }
@@ -468,6 +476,7 @@ body {
   line-height: 1.6;
   color: var(--color-logo-dark);
   transition: color 0.2s;
+  overflow: hidden;
 
   [data-theme='dark'] .logo {
     color: var(--color-logo-dark);
@@ -587,13 +596,13 @@ body {
 }
 
 .nav-link:hover {
-  background: #f3f4f6;
-  color: #374151;
+  background: var(--color-sidebar-hover);
+  color: var(--color-sidebar-hover-text);
 }
 
 .nav-link.active {
-  background: #eff6ff;
-  color: #1d4ed8;
+  background: var(--color-sidebar-active);
+  color: var(--color-sidebar-text);
   border-right-color: #3b82f6;
 }
 
@@ -649,7 +658,7 @@ a:hover, .nav-link:hover {
 }
   display: flex;
   align-items: center;
-  justify-content: center;
+  /* justify-content: center; */
   padding: 0.25rem;
   border-radius: 50%;
   transition: background 0.2s;
@@ -2566,7 +2575,8 @@ a:hover, .nav-link:hover {
 
 /* Small screens (tablets portrait, large phones) */
 @media (max-width: 768px) {
-  .app-body {
+  body {
+      .app-body {
     flex-direction: column;
   }
   
@@ -2582,7 +2592,7 @@ a:hover, .nav-link:hover {
   .sidebar-nav {
     display: flex;
     overflow-x: auto;
-    padding: 0.5rem;
+    /* padding: 0.5rem; */
   }
   
   .nav-list {
@@ -2752,6 +2762,8 @@ a:hover, .nav-link:hover {
   .pagination-btn {
     padding: 0.75rem 1.5rem;
     justify-content: center;
+  }
+
   }
 }
 

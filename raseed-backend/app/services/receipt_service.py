@@ -167,7 +167,7 @@ class ReceiptService:
             raise HTTPException(status_code=500, detail=f"Upload failed: {str(e)}")
     
     @staticmethod
-    async def get_receipts(limit: int = 10, offset: int = 0) -> List[ReceiptResponse]:
+    async def get_receipts(limit: int = 20, offset: int = 0) -> List[ReceiptResponse]:
         """Get list of receipts"""
         if not is_firebase_initialized():
             return []
@@ -192,13 +192,13 @@ class ReceiptService:
                 
                 # Convert timestamps
                 if 'created_at' in data and data['created_at']:
-                    data['created_at'] = data['created_at'].replace(tzinfo=None)
+                    data['created_at'] = data['created_at']
                 if 'updated_at' in data and data['updated_at']:
-                    data['updated_at'] = data['updated_at'].replace(tzinfo=None)
+                    data['updated_at'] = data['updated_at']
                 
                 receipt = ReceiptResponse(**data)
                 receipts.append(receipt)
-            
+            print(len(receipts))
             return receipts
             
         except Exception as e:

@@ -1,131 +1,140 @@
-// src/components/Layout/Sidebar.js - Updated with Step 4 Complete
+// src/components/Layout/Sidebar.js
 import React from 'react';
-import { NavLink } from 'react-router-dom';
-import { Upload, FileText, MessageSquare, BarChart3, Settings, X } from 'lucide-react';
+import { Link, useLocation } from 'react-router-dom';
+import { 
+  Upload, 
+  Receipt, 
+  MessageSquare, 
+  BarChart3,
+  TrendingUp,
+  Bell,
+  Target
+} from 'lucide-react';
 
-const Sidebar = ({ isOpen, isMobile, onClose }) => {
-  const navItems = [
-    { 
-      path: '/upload', 
-      icon: Upload, 
-      label: 'Upload',
-      fullLabel: 'Upload Receipt',
-      description: 'Add new receipts'
+const Sidebar = () => {
+  const location = useLocation();
+
+  const navigationItems = [
+    {
+      path: '/upload',
+      icon: Upload,
+      label: 'Upload Receipts',
+      description: 'Upload new receipt images',
+      badge: null
     },
-    { 
-      path: '/receipts', 
-      icon: FileText, 
-      label: 'Receipts',
-      fullLabel: 'My Receipts',
-      description: 'View all receipts'
+    {
+      path: '/receipts',
+      icon: Receipt,
+      label: 'My Receipts',
+      description: 'View all uploaded receipts',
+      badge: null
     },
-    { 
-      path: '/query', 
-      icon: MessageSquare, 
-      label: 'Query',
-      fullLabel: 'AI Assistant',
-      description: 'Ask in any language',
-      // badge: 'NEW!'
+    {
+      path: '/query',
+      icon: MessageSquare,
+      label: 'AI Assistant',
+      description: 'Ask questions about your spending',
+      // badge: 'Step 4'
     },
-    { 
-      path: '/analytics', 
-      icon: BarChart3, 
-      label: 'Analytics',
-      fullLabel: 'Analytics',
-      description: 'Spending insights',
+    {
+      path: '/insights',
+      icon: BarChart3,
+      label: 'Smart Insights',
+      description: 'AI-powered spending analysis',
       // badge: 'Step 5'
-    },
-    { 
-      path: '/settings', 
-      icon: Settings, 
-      label: 'Settings',
-      fullLabel: 'Settings',
-      description: 'App preferences',
-      // badge: 'Soon'
     }
   ];
 
-  const handleNavClick = () => {
-    if (isMobile && onClose) {
-      onClose();
-    }
+  const isActivePath = (path) => {
+    return location.pathname === path;
   };
 
   return (
-    <aside className={`sidebar ${isMobile ? 'sidebar-mobile' : ''} ${isMobile && isOpen ? 'sidebar-open' : ''}`}>
-      {/* {isMobile && (
-        <div className="sidebar-header">
-          <button 
-            className="close-button"
-            onClick={onClose}
-            aria-label="Close menu"
-          >
-            <X size={20} />
-          </button>
-        </div>
-      )} */}
-      
-      <nav className="sidebar-nav">
+    <aside className="sidebar">
+      <nav className="nav-content">
         <ul className="nav-list">
-          {navItems.map((item) => {
+          {navigationItems.map((item) => {
             const IconComponent = item.icon;
+            const isActive = isActivePath(item.path);
+            
             return (
               <li key={item.path} className="nav-item">
-                <NavLink 
-                  to={item.path} 
-                  className={({ isActive }) => 
-                    `nav-link ${isActive ? 'active' : ''}`
-                  }
-                  onClick={handleNavClick}
+                <Link
+                  to={item.path}
+                  className={`nav-link ${isActive ? 'active' : ''}`}
                 >
-                  <IconComponent className="nav-icon" size={20} />
-                  <div className="nav-content">
-                    <span className="nav-label">
-                      {isMobile ? item.label : item.fullLabel}
-                    </span>
-                    {!isMobile && (
-                      <span className="nav-description">{item.description}</span>
-                    )}
+                  <div className="nav-icon">
+                    <IconComponent className="icon" />
                   </div>
-                  {item.badge && !isMobile && (
-                    <span className={`nav-badge ${
-                      item.badge === 'NEW!' ? 'badge-green' : 
-                      item.badge === 'Soon' ? 'badge-gray' : 'badge-blue'
-                    }`}>
+                  <div className="nav-content-text">
+                    <div className="nav-label">{item.label}</div>
+                    <div className="nav-description">{item.description}</div>
+                  </div>
+                  {item.badge && (
+                    <span className={`nav-badge ${item.badge.startsWith('Step') ? 'badge-blue' : 'badge-gray'}`}>
                       {item.badge}
                     </span>
                   )}
-                </NavLink>
+                </Link>
               </li>
             );
           })}
         </ul>
-      </nav>
-      
-      {/* {!isMobile && (
-        <div className="sidebar-footer">
-          <div className="current-step">
-            <h4>Current: Step 4 Complete!</h4>
-            <p>🎉 Multi-Language AI Queries Active</p>
-            <div className="progress-steps">
-              <div className="step completed">1</div>
-              <div className="step completed">2</div>
-              <div className="step completed">3</div>
-              <div className="step completed">4</div>
-              <div className="step">5</div>
+
+        {/* Insights Quick Stats in Sidebar */}
+        {/* <div className="sidebar-insights">
+          <h3 className="insights-title">
+            <TrendingUp className="insights-icon" />
+            Quick Insights
+          </h3>
+          <div className="insight-stats">
+            <div className="insight-stat">
+              <Target className="stat-icon" />
+              <div className="stat-details">
+                <span className="stat-value">3</span>
+                <span className="stat-label">Active Alerts</span>
+              </div>
             </div>
-            <div className="step-details">
-              <small>
-                ✅ Upload & Storage<br/>
-                ✅ AI Data Extraction<br/>
-                ✅ Wallet Pass Generation<br/>
-                ✅ Natural Language Queries<br/>
-                🔄 Insights & Notifications (Next)
-              </small>
+            <div className="insight-stat">
+              <Bell className="stat-icon" />
+              <div className="stat-details">
+                <span className="stat-value">1</span>
+                <span className="stat-label">Unread</span>
+              </div>
             </div>
           </div>
-        </div>
-      )} */}
+          <Link to="/insights" className="insights-cta">
+            View All Insights
+          </Link>
+        </div> */}
+
+        {/* Project Status */}
+        {/* <div className="project-status">
+          <h3 className="status-title">Project Progress</h3>
+          <div className="status-steps">
+            <div className="status-step completed">
+              <div className="step-indicator"></div>
+              <span className="step-label">Step 1: Upload & Storage</span>
+            </div>
+            <div className="status-step completed">
+              <div className="step-indicator"></div>
+              <span className="step-label">Step 2: AI Extraction</span>
+            </div>
+            <div className="status-step completed">
+              <div className="step-indicator"></div>
+              <span className="step-label">Step 3: Wallet Integration</span>
+            </div>
+            <div className="status-step completed">
+              <div className="step-indicator"></div>
+              <span className="step-label">Step 4: AI Query System</span>
+            </div>
+            <div className="status-step active">
+              <div className="step-indicator"></div>
+              <span className="step-label">Step 5: Smart Insights</span>
+            </div>
+          </div>
+        </div> */}
+      </nav>
     </aside>
   );
 };

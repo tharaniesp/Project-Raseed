@@ -23,7 +23,7 @@ export const receiptService = {
   },
 
   // Get all receipts
-  async getReceipts(limit = 10, offset = 0) {
+  async getReceipts(limit = 20, offset = 0) {
     return ApiService.get(`/api/receipts?limit=${limit}&offset=${offset}`);
   },
 

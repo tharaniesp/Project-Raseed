@@ -13,15 +13,11 @@ class Settings(BaseSettings):
     
     # Server Config
     HOST: str = "0.0.0.0"
-    PORT: int = 8000
+    PORT: int = 8080
     DEBUG: bool = True
     
     # CORS
-    ALLOWED_ORIGINS: List[str] = [
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
-        "https://localhost:3000"
-    ]
+    ALLOWED_ORIGINS: List[str] = ["*"]  # Allow all origins in development
     
     # Firebase Configuration
     FIREBASE_PROJECT_ID: str = ""

@@ -7,14 +7,14 @@ import UploadPage from './pages/UploadPage';
 import ReceiptsPage from './pages/ReceiptsPage';
 import QueryPage from './pages/QueryPage';
 import { ReceiptProvider } from './context/ReceiptContext';
-import { useAuth } from './context/AuthContext';
+import { AuthProvider, useAuth } from './context/AuthContext';
 import LoginPage from './pages/LoginPage';
 import './styles/App.css';
 
-function App() {
+function AppContent() {
   const [isMobile, setIsMobile] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const { user } = useAuth();
+  const { user, loading } = useAuth();
 
   useEffect(() => {
     const checkMobile = () => {
@@ -29,38 +29,50 @@ function App() {
     setSidebarOpen(!sidebarOpen);
   };
 
+  if (loading) {
+    return <div className="loading">Loading...</div>;
+  }
+
   return (
-    <ReceiptProvider>
-      <Router>
-        {!user ? (
-          <Routes>
-            <Route path="*" element={<LoginPage />} />
-          </Routes>
-        ) : (
-          <div className="app">
-            <Header onMenuClick={toggleSidebar} isMobile={isMobile} />
-            <div className="app-body">
-              <Sidebar isOpen={sidebarOpen} isMobile={isMobile} onClose={() => setSidebarOpen(false)} />
-              <main className="main-content">
-                <Routes>
-                  <Route path="/" element={<UploadPage />} />
-                  <Route path="/upload" element={<UploadPage />} />
-                  <Route path="/receipts" element={<ReceiptsPage />} />
-                  <Route path="/query" element={<QueryPage />} />
-                </Routes>
-              </main>
-            </div>
-            {/* Mobile overlay */}
-            {isMobile && sidebarOpen && (
-              <div 
-                className="mobile-overlay" 
-                onClick={() => setSidebarOpen(false)}
-              />
-            )}
+    <Router>
+      {!user ? (
+        <Routes>
+          <Route path="*" element={<LoginPage />} />
+        </Routes>
+      ) : (
+        <div className="app">
+          <Header onMenuClick={toggleSidebar} isMobile={isMobile} />
+          <div className="app-body">
+            <Sidebar isOpen={sidebarOpen} isMobile={isMobile} onClose={() => setSidebarOpen(false)} />
+            <main className="main-content">
+              <Routes>
+                <Route path="/" element={<UploadPage />} />
+                <Route path="/upload" element={<UploadPage />} />
+                <Route path="/receipts" element={<ReceiptsPage />} />
+                <Route path="/query" element={<QueryPage />} />
+              </Routes>
+            </main>
           </div>
-        )}
-      </Router>
-    </ReceiptProvider>
+          {/* Mobile overlay */}
+          {isMobile && sidebarOpen && (
+            <div 
+              className="mobile-overlay" 
+              onClick={() => setSidebarOpen(false)}
+            />
+          )}
+        </div>
+      )}
+    </Router>
+  );
+}
+
+function App() {
+  return (
+    <AuthProvider>
+      <ReceiptProvider>
+        <AppContent />
+      </ReceiptProvider>
+    </AuthProvider>
   );
 }
 

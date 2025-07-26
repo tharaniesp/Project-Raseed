@@ -23,7 +23,7 @@ google-api-core==2.15.0
 
 # Enhanced NLP support
 langdetect==1.0.9
-googletrans==4.0.0
+googletrans==4.0.2
 
 # For Step 4 (Query Processing)
 openai==1.3.0

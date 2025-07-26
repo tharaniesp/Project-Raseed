@@ -1,13 +1,23 @@
 // src/components/Layout/Header.js
 import React from 'react';
 import { useTheme } from '../../context/ThemeContext';
-import { Sun, Moon } from 'lucide-react';
+import { Sun, Moon, LogOut } from 'lucide-react';
 import { FileText, Menu, X } from 'lucide-react';
 import { useReceipt } from '../../context/ReceiptContext';
+import { useAuth } from '../../context/AuthContext';
 
 const Header = ({ onMenuClick, isMobile }) => {
   const { backendStatus, totalReceipts } = useReceipt();
   const { theme, toggleTheme } = useTheme();
+  const { user, logout } = useAuth();
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+    } catch (error) {
+      console.error('Error logging out:', error);
+    }
+  };
 
   return (
     <header className="header">
@@ -52,6 +62,13 @@ const Header = ({ onMenuClick, isMobile }) => {
               {totalReceipts} Receipt{totalReceipts !== 1 ? 's' : ''}
             </span>
           </div>
+          {user && (
+            <div className="user-info">
+              <span className="user-name">
+                {user.displayName || user.email}
+              </span>
+            </div>
+          )}
           <button
             className="theme-toggle-btn"
             onClick={toggleTheme}
@@ -59,6 +76,24 @@ const Header = ({ onMenuClick, isMobile }) => {
             style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
           >
             {theme === 'dark' ? <Sun size={20} /> : <Moon size={20} />}
+          </button>
+          <button
+            className="logout-btn"
+            onClick={handleLogout}
+            aria-label="Logout"
+            style={{ 
+              background: 'none', 
+              border: 'none', 
+              cursor: 'pointer', 
+              padding: '0.5rem',
+              borderRadius: '4px',
+              color: '#666',
+              transition: 'background-color 0.2s'
+            }}
+            onMouseEnter={(e) => e.target.style.backgroundColor = '#f0f0f0'}
+            onMouseLeave={(e) => e.target.style.backgroundColor = 'transparent'}
+          >
+            <LogOut size={20} />
           </button>
           {/* <div className={`status-indicator ${backendStatus}`}>
             <div className={`status-dot ${backendStatus}`}></div>

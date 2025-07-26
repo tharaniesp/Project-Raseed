@@ -72,7 +72,7 @@ const ReceiptsPage = () => {
       </div>
 
       {/* Debug Info */}
-      <div style={{ background: '#f0f0f0', padding: '10px', marginBottom: '20px', fontSize: '12px' }}>
+      <div className="debug-info">
         <strong>Debug Info:</strong> 
         Loading: {loading.toString()}, 
         Error: {error || 'none'}, 

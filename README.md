@@ -1,7 +1,15 @@
 # 🧾 Project Raseed - AI-Powered Receipt Management System
 
-An intelligent receipt management system that uses AI to extract data from receipt images and provides natural language querying capabilities.
+An intelligent receipt management system that uses AI to extract data from receipt images and provides natural language querying capabilities **with support for 10+ Indian languages** including Hindi (हिंदी), Tamil (தமிழ்), Kannada (ಕನ್ನಡ), and more!
 
+## 🌟 Key Features
+
+- 🤖 **AI-Powered Receipt Processing** using Google Gemini Vision
+- 🇮🇳 **Indian Language Support** - Ask questions in Hindi, Tamil, Kannada, Telugu, Malayalam, and more
+- 📱 **Google Wallet Integration** - Create digital passes from receipts and shopping lists
+- 🔍 **Natural Language Queries** - "मुझे कुकिंग के लिए क्या चाहिए?" or "What can I cook with chicken?"
+- 💳 **Digital Wallet Passes** - Add receipts and shopping lists to Google Wallet
+- 📊 **Spending Insights** - Analyze spending patterns in your preferred language
 
 ## 🎯 Project Overview
 
@@ -10,7 +18,7 @@ An intelligent receipt management system that uses AI to extract data from recei
 - ✅ **Step 1**: Receipt Upload + Firebase Storage (COMPLETE)
 - ✅ **Step 2**: Gemini Vision AI Integration (COMPLETE)
 - ✅ **Step 3**: Google Wallet Pass Generation and Add to Google Wallet (COMPLETE)
-- 🔄 **Step 4**: Natural Language Query System
+- 🔄 **Step 4**: Natural Language Query System **with Indian Language Support** 🇮🇳
 - 🔄 **Step 5**: Insights & Push Notifications
 
 ## 🏗️ Architecture
@@ -185,6 +193,36 @@ GEMINI_API_KEY=your-gemini-api-key-here
    - **Vertex AI API** (for advanced AI features)
    - **Google Wallet API** (for digital passes)
    - **Cloud Translation API** (for multi-language support)
+
+## 🇮🇳 Indian Language Support
+
+Project Raseed now supports **10+ Indian languages** powered by Google Gemini AI! Users can interact with their personal shopping assistant in their native language.
+
+### Supported Languages
+- **हिंदी (Hindi)** - `hi`
+- **தமிழ் (Tamil)** - `ta` 
+- **ಕನ್ನಡ (Kannada)** - `kn`
+- **తెలుగు (Telugu)** - `te`
+- **മലയാളം (Malayalam)** - `ml`
+- **ગુજરાતી (Gujarati)** - `gu`
+- **मराठी (Marathi)** - `mr`
+- **বাংলা (Bengali)** - `bn`
+- **ਪੰਜਾਬੀ (Punjabi)** - `pa`
+- **ଓଡ଼ିଆ (Odia)** - `or`
+
+### Example Queries
+
+**Hindi**: `चिकन और चावल से मैं क्या बना सकता हूँ?`  
+**Tamil**: `கோழி மற்றும் அரிசியுடன் என்ன சமைக்க முடியும்?`  
+**Kannada**: `ಕೋಳಿ ಮತ್ತು ಅಕ್ಕಿಯೊಂದಿಗೆ ನಾನು ಏನು ಬೇಯಿಸಬಹುದು?`
+
+### Features
+- 🤖 **Native Language Understanding** - Ask in your preferred language
+- 🍛 **Cultural Context** - Indian cooking methods and ingredients
+- 🛒 **Smart Shopping** - Organized by Indian grocery categories
+- 💰 **Local Currency** - Spending analysis in Indian Rupees (₹)
+
+📖 **[Read full documentation →](INDIAN_LANGUAGE_SUPPORT.md)**
 
 ## 📁 Project Structure
 

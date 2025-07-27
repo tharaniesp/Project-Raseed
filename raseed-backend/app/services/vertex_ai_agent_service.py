@@ -93,7 +93,7 @@ class VertexAIAgentService:
         return self.use_generative_ai or self.use_vertex_ai
     
     def detect_language(self, text: str) -> str:
-        """Detect language of input text"""
+        """Detect language of input text with enhanced Indian language support"""
         if not LANGDETECT_AVAILABLE:
             logger.warning("⚠️ langdetect not available, defaulting to 'en'")
             return 'en'
@@ -101,6 +101,26 @@ class VertexAIAgentService:
         try:
             detected = detect(text)
             logger.info(f"🌐 Detected language: {detected}")
+            
+            # Map some common Indian languages that langdetect might not catch properly
+            indian_language_keywords = {
+                'hi': ['हिंदी', 'मैं', 'क्या', 'कैसे', 'कहाँ', 'कौन', 'कब', 'में', 'से', 'पर', 'को', 'का', 'की', 'के'],
+                'ta': ['தமிழ்', 'என்', 'எது', 'எப்படி', 'எங்கே', 'யார்', 'எப்போது', 'இல்', 'இருந்து', 'மேல்', 'க்கு', 'ன்', 'ள்', 'ம்'],
+                'kn': ['ಕನ್ನಡ', 'ನಾನು', 'ಏನು', 'ಹೇಗೆ', 'ಎಲ್ಲಿ', 'ಯಾರು', 'ಯಾವಾಗ', 'ಲಿ', 'ಇಂದ', 'ಮೇಲೆ', 'ಗೆ', 'ನ್ನ', 'ಳ್ಳ', 'ಮ್ಮ'],
+                'te': ['తెలుగు', 'నేను', 'ఏమి', 'ఎలా', 'ఎక్కడ', 'ఎవరు', 'ఎప్పుడు', 'లో', 'నుండి', 'మీద', 'కు', 'న్న', 'ల్ల', 'మ్మ'],
+                'ml': ['മലയാളം', 'ഞാൻ', 'എന്ത്', 'എങ്ങനെ', 'എവിടെ', 'ആര്', 'എപ്പോൾ', 'ൽ', 'നിന്ന്', 'മേൽ', 'ക്ക്', 'ന്ന', 'ള്ള', 'മ്മ'],
+                'gu': ['ગુજરાતી', 'હું', 'શું', 'કેવી', 'ક્યાં', 'કોણ', 'ક્યારે', 'માં', 'થી', 'પર', 'ને', 'ના', 'ની', 'નું'],
+                'mr': ['मराठी', 'मी', 'काय', 'कसे', 'कुठे', 'कोण', 'केव्हा', 'मध्ये', 'पासून', 'वर', 'ला', 'चा', 'ची', 'चे'],
+                'bn': ['বাংলা', 'আমি', 'কি', 'কিভাবে', 'কোথায়', 'কে', 'কখন', 'তে', 'থেকে', 'উপর', 'কে', 'র', 'দের', 'গুলো'],
+                'pa': ['ਪੰਜਾਬੀ', 'ਮੈਂ', 'ਕੀ', 'ਕਿਵੇਂ', 'ਕਿੱਥੇ', 'ਕੌਣ', 'ਕਦੋਂ', 'ਵਿੱਚ', 'ਤੋਂ', 'ਉੱਤੇ', 'ਨੂੰ', 'ਦਾ', 'ਦੀ', 'ਦੇ']
+            }
+            
+            # Check if any Indian language keywords are present
+            for lang_code, keywords in indian_language_keywords.items():
+                if any(keyword in text for keyword in keywords):
+                    logger.info(f"🇮🇳 Detected Indian language by keyword matching: {lang_code}")
+                    return lang_code
+            
             return detected
         except Exception as e:
             logger.warning(f"⚠️ Language detection failed: {e}, defaulting to 'en'")
@@ -141,26 +161,55 @@ class VertexAIAgentService:
             return text
     
     def classify_query_type(self, query: str) -> QueryType:
-        """Classify the type of query to determine response strategy"""
+        """Classify the type of query to determine response strategy with Indian language support"""
         query_lower = query.lower()
         
-        # Cooking and recipe related
-        cooking_keywords = ['cook', 'recipe', 'make', 'prepare', 'dish', 'meal', 'ingredient', 'kitchen']
+        # Enhanced keyword sets including common Indian language terms
+        # Cooking and recipe related (including Indian terms)
+        cooking_keywords = [
+            'cook', 'recipe', 'make', 'prepare', 'dish', 'meal', 'ingredient', 'kitchen',
+            'बनाना', 'पकाना', 'खाना', 'रसोई',  # Hindi
+            'சமைக்க', 'உணவு', 'அடுப்பங்கரை',  # Tamil
+            'ಬೇಯಿಸು', 'ಅಡುಗೆ', 'ಆಹಾರ',  # Kannada
+            'వండటం', 'వంటకాలు', 'ఆహారం',  # Telugu
+            'പാചകം', 'ഭക്ഷണം', 'അടുക്കള',  # Malayalam
+        ]
         if any(keyword in query_lower for keyword in cooking_keywords):
             return QueryType.COOKING_SUGGESTIONS
         
-        # Shopping list related
-        shopping_keywords = ['buy', 'need', 'shopping', 'list', 'purchase', 'get', 'missing']
+        # Shopping list related (including Indian terms)
+        shopping_keywords = [
+            'buy', 'need', 'shopping', 'list', 'purchase', 'get', 'missing',
+            'खरीदना', 'चाहिए', 'सामान', 'लिस्ट',  # Hindi
+            'வாங்க', 'தேவை', 'பட்டியல்', 'சாமான்',  # Tamil
+            'ಖರೀದಿಸು', 'ಬೇಕು', 'ಪಟ್ಟಿ', 'ಸಾಮಾನು',  # Kannada
+            'కొనుగోలు', 'కావాలి', 'జాబితా', 'సామాను',  # Telugu
+            'വാങ്ങുക', 'വേണം', 'പട്ടിക', 'സാധനം',  # Malayalam
+        ]
         if any(keyword in query_lower for keyword in shopping_keywords):
             return QueryType.SHOPPING_LIST
         
-        # Inventory check
-        inventory_keywords = ['have', 'enough', 'do i have', 'check', 'inventory', 'stock']
+        # Inventory check (including Indian terms)
+        inventory_keywords = [
+            'have', 'enough', 'do i have', 'check', 'inventory', 'stock',
+            'है', 'पास', 'जांच', 'स्टॉक',  # Hindi
+            'இருக்கிறது', 'போதும்', 'பார்க்க', 'கையிருப்பு',  # Tamil
+            'ಇದೆ', 'ಸಾಕು', 'ನೋಡು', 'ಸ್ಟಾಕ್',  # Kannada
+            'ఉంది', 'చాలు', 'చూడు', 'స్టాక్',  # Telugu
+            'ഉണ്ട്', 'മതി', 'നോക്കു', 'സ്റ്റോക്ക്',  # Malayalam
+        ]
         if any(keyword in query_lower for keyword in inventory_keywords):
             return QueryType.INVENTORY_CHECK
         
-        # Spending analysis
-        spending_keywords = ['spent', 'cost', 'money', 'budget', 'expensive', 'cheap', 'price']
+        # Spending analysis (including Indian terms)
+        spending_keywords = [
+            'spent', 'cost', 'money', 'budget', 'expensive', 'cheap', 'price',
+            'खर्च', 'पैसा', 'दाम', 'बजट', 'महंगा', 'सस्ता',  # Hindi
+            'செலவு', 'பணம்', 'விலை', 'பட்ஜெட்', 'விலை உயர்ந்த', 'மலிவான',  # Tamil
+            'ಖರ್ಚು', 'ಹಣ', 'ಬೆಲೆ', 'ಬಜೆಟ್', 'ದುಬಾರಿ', 'ಅಗ್ಗ',  # Kannada
+            'ఖర్చు', 'డబ్బు', 'ధర', 'బడ్జెట్', 'ఖరీదైన', 'చౌక',  # Telugu
+            'ചിലവ്', 'പണം', 'വില', 'ബഡ്ജറ്റ്', 'ചെലവേറിയ', 'വിലകുറഞ്ഞ',  # Malayalam
+        ]
         if any(keyword in query_lower for keyword in spending_keywords):
             return QueryType.SPENDING_ANALYSIS
         
@@ -331,38 +380,48 @@ class VertexAIAgentService:
         return context
     
     def _get_type_specific_instructions(self, query_type: QueryType) -> str:
-        """Get specific instructions based on query type"""
+        """Get specific instructions based on query type with enhanced Indian language support"""
         if query_type == QueryType.COOKING_SUGGESTIONS:
             return """
-            - Suggest recipes based on items they already have
-            - Mention what additional ingredients they might need
-            - Provide step-by-step cooking instructions
-            - Consider dietary restrictions if mentioned
+            - Suggest recipes based on items they already have, with preference for Indian cuisine if detected
+            - Mention what additional Indian spices or ingredients they might need
+            - Provide step-by-step cooking instructions in the user's language
+            - Include traditional Indian cooking techniques (tempering, slow cooking, etc.)
+            - Consider dietary restrictions and regional preferences if mentioned
+            - Use both English and local names for ingredients when helpful
             """
         elif query_type == QueryType.SHOPPING_LIST:
             return """
-            - Create a shopping list based on their request
+            - Create a shopping list based on their request in their preferred language
+            - For Indian users, include common Indian grocery items and spices
             - Consider what they already have to avoid duplicates
-            - Suggest quantities where appropriate
-            - Group items by store section if possible
+            - Suggest quantities appropriate for Indian household sizes
+            - Group items by store section (vegetables, grains, spices, dairy, etc.)
+            - Include both English and local names for better clarity
             - Format shopping items clearly with SHOPPING_LIST: prefix
             """
         elif query_type == QueryType.INVENTORY_CHECK:
             return """
             - Check if they have the items they're asking about
+            - For Indian pantry items, consider typical storage and usage patterns
             - Be specific about quantities if possible
-            - Suggest alternatives if they don't have something
+            - Suggest alternatives if they don't have something, preferring Indian substitutes
+            - Include traditional Indian storage tips
             """
         elif query_type == QueryType.SPENDING_ANALYSIS:
             return """
-            - Analyze their spending patterns
-            - Provide insights about costs and budgeting
-            - Suggest ways to save money
+            - Analyze their spending patterns with cultural context
+            - For Indian users, compare with typical Indian household spending
+            - Be specific about costs and budgeting in local currency (₹)
+            - Suggest ways to save money using Indian shopping wisdom
+            - Consider seasonal variations in Indian markets
             """
         else:
             return """
             - Provide helpful information based on their purchase history
-            - Be conversational and helpful
+            - Be conversational and helpful in their preferred language
+            - Include culturally relevant suggestions for Indian users
+            - Reference traditional cooking and shopping wisdom
             """
     
     async def process_query_with_ai(self, context_prompt: str) -> str:
@@ -376,26 +435,46 @@ class VertexAIAgentService:
             return "I apologize, but I'm currently unable to process your request due to AI service limitations. Please try again later."
 
     async def process_query_with_generative_ai(self, context_prompt: str) -> str:
-        """Process query using Google Generative AI"""
+        """Process query using Google Generative AI with enhanced Indian language support"""
         try:
-            logger.info("🤖 Processing with Google Generative AI...")
+            logger.info("🤖 Processing with Google Generative AI (with Indian language support)...")
             
             model = genai.GenerativeModel(settings.GENERATIVE_AI_MODEL)
             
+            # Enhanced generation config for better multilingual support
             generation_config = genai.types.GenerationConfig(
-                temperature=0.7,
-                top_p=0.8,
-                top_k=40,
-                max_output_tokens=2048,
+                temperature=0.7,  # Balanced creativity for natural responses
+                top_p=0.8,       # Good diversity while maintaining quality
+                top_k=40,        # Reasonable token selection
+                max_output_tokens=2048,  # Sufficient for detailed responses in any language
+                candidate_count=1
             )
             
+            # Add system instruction for better Indian language handling
+            enhanced_prompt = f"""
+You are a helpful AI assistant specializing in Indian household management, cooking, and shopping. 
+You understand and can respond fluently in multiple Indian languages including Hindi, Tamil, Kannada, Telugu, Malayalam, Gujarati, Marathi, Bengali, and Punjabi.
+
+CRITICAL: Always respond in the SAME LANGUAGE as the user's query. Maintain the original script and cultural context.
+
+{context_prompt}
+
+Additional Guidelines for Indian Language Responses:
+- Use appropriate honorifics and polite forms
+- Include traditional Indian cooking wisdom
+- Reference common Indian ingredients and spices
+- Consider regional cooking variations
+- Use metric measurements (kg, grams, liters)
+- Include cultural context in suggestions
+"""
+            
             response = model.generate_content(
-                context_prompt,
+                enhanced_prompt,
                 generation_config=generation_config
             )
             
             if response.text:
-                logger.info("✅ Google Generative AI response received")
+                logger.info("✅ Google Generative AI response received (with Indian language support)")
                 return response.text
             else:
                 logger.warning("⚠️ Empty response from Google Generative AI")
@@ -621,9 +700,9 @@ class VertexAIAgentService:
                         "purchase_date": receipt.get('date')
                     })
         
-        # Create Vertex AI optimized prompt
+        # Create Vertex AI optimized prompt with enhanced multi-language support
         prompt = f"""
-Role: You are an intelligent shopping and cooking assistant with access to the user's purchase history.
+Role: You are an intelligent shopping and cooking assistant with access to the user's purchase history. You are capable of understanding and responding in multiple languages including Indian languages like Hindi, Tamil, Kannada, Telugu, Malayalam, Gujarati, Marathi, Bengali, and Punjabi.
 
 User Query: {query}
 Query Type: {query_type.value}
@@ -638,12 +717,22 @@ Instructions based on query type:
 {self._get_vertex_ai_instructions(query_type)}
 
 Response Requirements:
-1. Provide a helpful, natural response in the same language as the user's query
-2. If suggesting items to purchase, format them as: "SHOPPING_LIST: item1, item2, item3"
-3. Be specific and practical
-4. Consider what the user already has to avoid duplicates
-5. For cooking queries, provide step-by-step instructions
-6. For shopping queries, organize items by category when possible
+1. **IMPORTANT**: Respond in the SAME LANGUAGE as the user's query. If the user asks in Hindi, respond in Hindi. If in Tamil, respond in Tamil, etc.
+2. For Indian languages, use appropriate script (Devanagari for Hindi, Tamil script for Tamil, etc.)
+3. If suggesting items to purchase, format them as: "SHOPPING_LIST: item1, item2, item3" (this part can remain in English for technical processing)
+4. Be specific and practical, considering Indian cooking preferences and ingredients
+5. Consider what the user already has to avoid duplicates
+6. For cooking queries, provide step-by-step instructions in the user's language
+7. For shopping queries, organize items by category when possible
+8. Use culturally appropriate references and cooking methods for Indian users
+9. Include both English and local names for ingredients when helpful (e.g., "हल्दी (turmeric)")
+
+Special Instructions for Indian Language Responses:
+- Use polite forms appropriate to the language
+- Reference common Indian spices, ingredients, and cooking methods
+- Consider regional preferences (e.g., rice-based dishes for South India, wheat-based for North India)
+- Use appropriate measurement units (kg, grams, liters)
+- Include traditional cooking tips where relevant
 
 Context: The user has made {len(receipts_data)} purchases in the last 2 weeks totaling {len(context_data['available_items'])} items.
 """
@@ -651,41 +740,52 @@ Context: The user has made {len(receipts_data)} purchases in the last 2 weeks to
         return prompt
     
     def _get_vertex_ai_instructions(self, query_type: QueryType) -> str:
-        """Get Vertex AI specific instructions for different query types"""
+        """Get Vertex AI specific instructions for different query types with Indian language support"""
         instructions = {
             QueryType.COOKING_SUGGESTIONS: """
-- Analyze available ingredients and suggest complete recipes
-- Mention cooking techniques and estimated cooking time
+- Analyze available ingredients and suggest complete recipes in the user's language
+- For Indian language queries, suggest traditional Indian recipes and cooking methods
+- Include both ingredient names in English and local language where helpful
+- Mention cooking techniques specific to Indian cuisine (tadka, dum cooking, etc.)
+- Provide estimated cooking time and difficulty level
 - Identify missing ingredients and suggest where to buy them
-- Provide difficulty level and serving suggestions
 - Include nutritional benefits when relevant
+- Consider regional cooking preferences (South Indian vs North Indian styles)
 """,
             QueryType.SHOPPING_LIST: """
-- Create comprehensive shopping lists based on the request
-- Organize items by store sections (produce, dairy, pantry, etc.)
-- Suggest quantities based on typical usage
-- Consider seasonal availability and pricing
+- Create comprehensive shopping lists in the user's language
+- For Indian users, include common Indian grocery items and spices
+- Organize items by store sections (vegetables, grains, spices, dairy, etc.)
+- Suggest quantities based on typical Indian household usage
+- Consider seasonal availability and local pricing
+- Include both English and local names for items
 - Format as "SHOPPING_LIST: item1, item2, item3" for wallet pass generation
+- Suggest visiting specific types of stores (local sabzi mandi, grocery stores, etc.)
 """,
             QueryType.INVENTORY_CHECK: """
-- Check available quantities against user needs
-- Estimate how long current supplies will last
-- Suggest optimal restock timing
-- Recommend storage tips to extend freshness
-- Alert to potential shortages
+- Check available quantities against user needs in their preferred language
+- For Indian pantry items, consider typical storage and shelf life
+- Estimate how long current supplies will last based on Indian cooking patterns
+- Suggest optimal restock timing for perishables vs non-perishables
+- Recommend traditional Indian storage tips to extend freshness
+- Alert to potential shortages of essential Indian cooking ingredients (rice, lentils, spices)
 """,
             QueryType.SPENDING_ANALYSIS: """
-- Analyze spending patterns and trends
-- Identify opportunities for savings
-- Compare prices across different merchants
-- Suggest budget-friendly alternatives
-- Provide spending category breakdowns
+- Analyze spending patterns and provide insights in the user's language
+- For Indian users, compare prices with typical Indian market rates
+- Identify opportunities for savings (bulk buying of rice/lentils, seasonal vegetables)
+- Compare prices across different types of stores (supermarkets vs local vendors)
+- Suggest budget-friendly Indian alternatives and substitutes
+- Provide spending category breakdowns relevant to Indian households
+- Consider festival seasons and their impact on grocery spending
 """,
             QueryType.GENERAL: """
-- Provide helpful information based on purchase history
-- Suggest related products or services
-- Offer general cooking and shopping tips
-- Be conversational and helpful
+- Provide helpful information in the user's preferred language
+- For Indian users, include culturally relevant suggestions
+- Reference traditional Indian cooking wisdom and tips
+- Suggest related Indian products or seasonal items
+- Offer general cooking and shopping tips relevant to Indian households
+- Be conversational and respectful of cultural preferences
 """
         }
         

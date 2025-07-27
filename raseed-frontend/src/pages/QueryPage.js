@@ -22,19 +22,34 @@ const QueryPage = () => {
   const [selectedCategory, setSelectedCategory] = useState('cooking');
   const messagesEndRef = useRef(null);
 
-  // Language options
+  // Language options - Enhanced with Indian languages
   const languages = [
     { code: 'auto', name: 'Auto-detect', flag: '🌐' },
     { code: 'en', name: 'English', flag: '🇺🇸' },
+    // Indian Languages
+    { code: 'hi', name: 'हिंदी (Hindi)', flag: '🇮🇳' },
+    { code: 'ta', name: 'தமிழ் (Tamil)', flag: '🇮🇳' },
+    { code: 'kn', name: 'ಕನ್ನಡ (Kannada)', flag: '🇮🇳' },
+    { code: 'te', name: 'తెలుగు (Telugu)', flag: '🇮🇳' },
+    { code: 'ml', name: 'മലയാളം (Malayalam)', flag: '🇮🇳' },
+    { code: 'gu', name: 'ગુજરાતી (Gujarati)', flag: '🇮🇳' },
+    { code: 'mr', name: 'मराठी (Marathi)', flag: '🇮🇳' },
+    { code: 'bn', name: 'বাংলা (Bengali)', flag: '🇮🇳' },
+    { code: 'pa', name: 'ਪੰਜਾਬੀ (Punjabi)', flag: '🇮🇳' },
+    { code: 'or', name: 'ଓଡ଼ିଆ (Odia)', flag: '🇮🇳' },
+    // International Languages
     { code: 'es', name: 'Spanish', flag: '🇪🇸' },
     { code: 'fr', name: 'French', flag: '🇫🇷' },
     { code: 'de', name: 'German', flag: '🇩🇪' },
     { code: 'it', name: 'Italian', flag: '🇮🇹' },
     { code: 'pt', name: 'Portuguese', flag: '🇵🇹' },
     { code: 'zh', name: 'Chinese', flag: '🇨🇳' },
+    { code: 'ja', name: 'Japanese', flag: '🇯🇵' },
+    { code: 'ko', name: 'Korean', flag: '🇰🇷' },
+    { code: 'ar', name: 'Arabic', flag: '🇸🇦' },
   ];
 
-  // Sample queries organized by category
+  // Sample queries organized by category - Enhanced with Indian languages
   const queryCategories = {
     cooking: {
       icon: ChefHat,
@@ -42,6 +57,9 @@ const QueryPage = () => {
       label: 'Cooking & Recipes',
       queries: [
         "What can I cook with chicken and rice?",
+        "चिकन और चावल से मैं क्या बना सकता हूँ?", // Hindi
+        "கோழி மற்றும் அரிசியுடன் என்ன சமைக்க முடியும்?", // Tamil
+        "ಕೋಳಿ ಮತ್ತು ಅಕ್ಕಿಯೊಂದಿಗೆ ನಾನು ಏನು ಬೇಯಿಸಬಹುದು?", // Kannada
         "¿Qué puedo cocinar con pollo y arroz?",
         "Qu'est-ce que je peux cuisiner avec du poulet?",
         "Suggest a recipe using ingredients I bought this week"
@@ -53,6 +71,9 @@ const QueryPage = () => {
       label: 'Shopping Lists',
       queries: [
         "What ingredients do I need to buy to make pasta?",
+        "पास्ता बनाने के लिए मुझे कौन से सामग्री खरीदनी चाहिए?", // Hindi
+        "பாஸ்தா செய்ய என்ன பொருட்கள் வாங்க வேண்டும்?", // Tamil
+        "ಪಾಸ್ಟಾ ಮಾಡಲು ನಾನು ಯಾವ ಪದಾರ್ಥಗಳನ್ನು ಖರೀದಿಸಬೇಕು?", // Kannada
         "¿Qué necesito comprar para hacer gazpacho?",
         "Create a shopping list for making tacos",
         "I need to buy ingredients for chicken curry"
@@ -64,6 +85,9 @@ const QueryPage = () => {
       label: 'Inventory Check',
       queries: [
         "Do I have enough laundry detergent for the week?",
+        "क्या मेरे पास सप्ताह भर के लिए पर्याप्त कपड़े धोने का डिटर्जेंट है?", // Hindi
+        "என்னிடம் வாரத்திற்கு போதுமான துணி துவைக்கும் பொருள் உள்ளதா?", // Tamil
+        "ವಾರಕ್ಕೆ ಸಾಕಷ್ಟು ಬಟ್ಟೆ ಒಗೆಯುವ ಡಿಟರ್ಜೆಂಟ್ ಇದೆಯೇ?", // Kannada
         "Check if I have milk and eggs",
         "What food items am I running low on?",
         "How much bread do I have left?"
@@ -75,6 +99,9 @@ const QueryPage = () => {
       label: 'Spending Analysis',
       queries: [
         "How much did I spend on groceries this month?",
+        "इस महीने मैंने किराने का सामान पर कितना खर्च किया?", // Hindi
+        "இந்த மாதம் நான் மளிகை சாமான்களுக்கு எவ்வளவு செலவழித்தேன்?", // Tamil
+        "ಈ ತಿಂಗಳು ನಾನು ಕಿರಾಣಿ ಸಾಮಾನುಗಳಿಗೆ ಎಷ್ಟು ಖರ್ಚು ಮಾಡಿದೆ?", // Kannada
         "What's my average weekly food spending?",
         "Show my spending pattern for household items",
         "What was my biggest purchase this week?"
@@ -87,10 +114,10 @@ const QueryPage = () => {
     loadVertexAiStatus();
     loadQueryStatistics();
     
-    // Add welcome message
+    // Add welcome message with Indian language support
     setMessages([{
       type: 'system',
-      content: '🌟 Welcome to Project Raseed AI Assistant! Ask me anything about your receipts in any language.',
+      content: '🌟 Welcome to Project Raseed AI Assistant! Ask me anything about your receipts in any language including Hindi (हिंदी), Tamil (தமிழ்), Kannada (ಕನ್ನಡ), Telugu (తెలుగు), and many more! 🇮🇳',
       timestamp: new Date(),
       confidence: 1.0,
       language: 'en'
@@ -355,8 +382,8 @@ const QueryPage = () => {
         }}>
           <Globe style={{ color: '#10b981' }} size={24} />
           <div>
-            <h3 style={{ fontWeight: '600', color: '#111827', margin: '0 0 0.25rem 0' }}>Languages</h3>
-            <p style={{ fontSize: '0.875rem', color: '#6b7280', margin: 0 }}>🌐 20+ Supported</p>
+            <h3 style={{ fontWeight: '600', color: '#111827', margin: '0 0 0.25rem 0' }}>Indian Languages</h3>
+            <p style={{ fontSize: '0.875rem', color: '#6b7280', margin: 0 }}>�🇳 Hindi, Tamil, Kannada + 15 More</p>
           </div>
         </div>
 

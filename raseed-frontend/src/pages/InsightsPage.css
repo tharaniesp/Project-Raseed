@@ -167,6 +167,8 @@
   padding: 1.5rem;
   transition: all 0.2s;
   min-width: 0;
+  display: flex;
+  flex-direction: column;
 }
 
 .stat-card:hover {

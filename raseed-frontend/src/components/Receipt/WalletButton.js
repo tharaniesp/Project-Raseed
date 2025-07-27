@@ -111,7 +111,7 @@ const WalletButton = ({ receipt }) => {
       )}
 
       {/* Debug info in development */}
-      {process.env.NODE_ENV === 'development' && (
+      {/* {process.env.NODE_ENV === 'development' && (
         <div className="wallet-debug">
           <details>
             <summary>Debug Info</summary>
@@ -126,7 +126,7 @@ const WalletButton = ({ receipt }) => {
             }, null, 2)}</pre>
           </details>
         </div>
-      )}
+      )} */}
     </div>
   );
 };

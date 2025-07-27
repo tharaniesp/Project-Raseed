@@ -347,7 +347,7 @@ const ReceiptCard = ({ receipt }) => {
         )}
 
         {/* Debug info in development */}
-        {process.env.NODE_ENV === 'development' && (
+        {/* {process.env.NODE_ENV === 'development' && (
           <div style={{ 
             fontSize: '10px', 
             background: '#f0f0f0', 
@@ -365,7 +365,7 @@ const ReceiptCard = ({ receipt }) => {
               <span>, Wallet: {localReceipt.wallet_pass.auto_generated ? 'Auto' : 'Manual'}</span>
             )}
           </div>
-        )}
+        )} */}
       </div>
     </div>
   );

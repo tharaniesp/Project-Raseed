@@ -279,10 +279,10 @@ const InsightsPage = () => {
               {refreshing ? 'Refreshing...' : 'Refresh'}
             </button>
             
-            <button className="btn btn-outline">
+            {/* <button className="btn btn-outline">
               <Download className="btn-icon" />
               Export
-            </button>
+            </button> */}
           </div>
         </div>
       </div>

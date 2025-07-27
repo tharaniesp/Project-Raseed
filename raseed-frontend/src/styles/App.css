@@ -501,7 +501,7 @@ body {
   line-height: 1.6;
   color: var(--color-logo-dark);
   transition: color 0.2s;
-  overflow-x: hidden;
+  overflow: hidden;
 
   [data-theme='dark'] .logo {
     color: var(--color-logo-dark);
@@ -522,7 +522,7 @@ body {
   display: flex;
   flex-direction: column;
   background: var(--color-bg);
-  overflow: hidden;
+  /* overflow: hidden; */
 }
 
 .app-body {
@@ -536,8 +536,8 @@ body {
   padding: 2rem;
   background: var(--color-main-bg);
   overflow-y: auto;
+  max-height: calc(100vh - 74px);
   overflow-x: hidden;
-  min-height: 0;
 }
 
 .logo {
@@ -1016,6 +1016,7 @@ a:hover, .nav-link:hover {
   justify-content: center;
   min-width: 36px;
   height: 36px;
+  width: 100px;
 }
 
 .action-btn:hover {

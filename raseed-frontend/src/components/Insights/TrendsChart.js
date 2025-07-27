@@ -452,12 +452,12 @@ const TrendsChart = ({ insights, loading = false, onRefresh }) => {
       </div>
 
       <div className="chart-footer">
-        <button 
+        {/* <button 
           className="expand-btn"
           onClick={() => setIsExpanded(!isExpanded)}
         >
           {isExpanded ? 'Collapse View' : 'Expand View'}
-        </button>
+        </button> */}
         
         <div className="chart-actions">
           <button 

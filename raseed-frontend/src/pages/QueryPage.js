@@ -311,7 +311,7 @@ const QueryPage = () => {
         <h1 className="page-title" style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
           <Brain size={28} />
           AI Assistant
-          <span style={{ 
+          {/* <span style={{ 
             background: 'linear-gradient(135deg, #10b981, #059669)',
             color: 'white',
             fontSize: '0.7rem',
@@ -323,7 +323,7 @@ const QueryPage = () => {
             marginLeft: '0.5rem'
           }}>
             Step 4 Complete
-          </span>
+          </span> */}
         </h1>
         <p className="page-description">
           Ask questions about your receipts in any language and get smart insights
@@ -331,7 +331,7 @@ const QueryPage = () => {
       </div>
 
       {/* Debug Info */}
-      <div style={{
+      {/* <div style={{
         background: 'linear-gradient(135deg, #fef2f2, #fee2e2)',
         border: '1px solid #fca5a5',
         borderRadius: '12px',
@@ -344,7 +344,7 @@ const QueryPage = () => {
         Receipts Error: {receiptsError || 'none'}, 
         Receipts Count: {receipts.length}, 
         Receipts with Data: {receipts.filter(r => r.extracted_data).length}
-      </div>
+      </div> */}
 
       {/* Status Dashboard */}
       <div style={{ 

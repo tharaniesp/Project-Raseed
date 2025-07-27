@@ -72,13 +72,13 @@ const ReceiptsPage = () => {
       </div>
 
       {/* Debug Info */}
-      <div className="debug-info">
+      {/* <div className="debug-info">
         <strong>Debug Info:</strong> 
         Loading: {loading.toString()}, 
         Error: {error || 'none'}, 
         Receipts Count: {receipts.length}, 
         Filtered Count: {filteredReceipts.length}
-      </div>
+      </div> */}
 
       {/* Search and Filter */}
       <div className="receipts-controls">

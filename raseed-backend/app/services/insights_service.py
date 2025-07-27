@@ -27,6 +27,7 @@ from collections import defaultdict, Counter
 # Core dependencies
 from app.core.config import settings
 from app.core.database import db, get_firestore_client, is_firebase_initialized
+from app.services.wallet_service import WalletService
 from google.cloud.firestore_v1.base_query import FieldFilter
 
 logger = logging.getLogger(__name__)
@@ -115,6 +116,13 @@ class InsightsService:
         self._insights_cache = {}
         self._notifications_cache = {}
         self._wallet_passes_cache = {}
+        
+        # Check wallet pass configuration
+        if settings.AUTO_GENERATE_WALLET_PASS:
+            if not WalletService.is_wallet_available():
+                self.logger.warning("⚠️ Wallet pass auto-generation enabled but service not available")
+            else:
+                self.logger.info("✅ Wallet pass service available and auto-generation enabled")
         
         # Configuration
         self.overspending_threshold = 0.15  # 15% increase triggers alert
@@ -923,6 +931,17 @@ class InsightsService:
                 
                 # Log notification (in production, send push notification)
                 self.logger.info(f"🔔 Notification created: {insight['title']} for user {insight['user_id']}")
+                
+                # Auto-generate wallet pass for eligible high-priority insights
+                if settings.AUTO_GENERATE_WALLET_PASS and insight.get("wallet_pass_eligible", True):
+                    try:
+                        wallet_result = await self.generate_wallet_pass(insight["insight_id"])
+                        if "error" not in wallet_result:
+                            self.logger.info(f"🎫 Auto-generated wallet pass for insight: {insight['insight_id']}")
+                        else:
+                            self.logger.warning(f"⚠️ Auto wallet pass generation failed: {wallet_result['error']}")
+                    except Exception as wallet_error:
+                        self.logger.error(f"❌ Auto wallet pass generation error: {wallet_error}")
         
         except Exception as e:
             self.logger.error(f"❌ Error triggering notifications: {e}")
@@ -932,72 +951,138 @@ class InsightsService:
     # ================================
     
     async def generate_wallet_pass(self, insight_id: str) -> Dict:
-        """Generate a Google Wallet pass from an insight"""
+        """Generate a Google Wallet pass from an insight using WalletService"""
         try:
             self.logger.info(f"💳 Generating wallet pass for insight: {insight_id}")
+            
+            # Check if wallet pass generation is enabled
+            if not settings.AUTO_GENERATE_WALLET_PASS:
+                return {"error": "Wallet pass generation is disabled"}
             
             # Find the insight
             insight_data = await self._find_insight_by_id(insight_id)
             if not insight_data:
                 return {"error": "Insight not found"}
             
-            # Create wallet pass
-            pass_data = {
-                "pass_id": f"pass_{uuid.uuid4().hex[:8]}",
-                "insight_id": insight_id,
-                "user_id": insight_data.get("user_id", "current_user"),
-                "pass_url": f"https://wallet.google.com/pass/{insight_id}",
-                "title": insight_data.get("title", "Spending Insight"),
-                "description": insight_data.get("description", "Your personalized spending insight"),
-                "category": insight_data.get("category"),
-                "amount_impact": insight_data.get("amount_impact"),
-                "suggestions": insight_data.get("actionable_suggestions", []),
-                "priority": insight_data.get("priority", "medium"),
-                "created_at": datetime.now().isoformat(),
-                "expires_at": (datetime.now() + timedelta(days=30)).isoformat(),
-                "status": "active",
-                "barcode": f"PKPass_{insight_id}",
-                "background_color": self._get_pass_color(insight_data.get("priority", "medium")),
-                "logo_text": "Raseed Insights"
-            }
+            # Check if insight is eligible for wallet pass
+            if not insight_data.get("wallet_pass_eligible", True):
+                return {"error": "Insight is not eligible for wallet pass generation"}
             
-            # Store wallet pass
-            user_id = insight_data.get("user_id", "current_user")
-            user_passes = self._wallet_passes_cache.get(user_id, [])
-            user_passes.append(pass_data)
-            self._wallet_passes_cache[user_id] = user_passes
-            
-            self.logger.info(f"✅ Wallet pass generated: {pass_data['pass_id']}")
-            return pass_data
+            # Use WalletService to generate the actual wallet pass
+            try:
+                wallet_result = await WalletService.generate_pass_for_insight(insight_data)
+                
+                # Store wallet pass info in insight data
+                user_id = insight_data.get("user_id", "current_user")
+                if is_firebase_initialized():
+                    try:
+                        db_client = get_firestore_client()
+                        
+                        # Create or update the insight document in Firestore
+                        insight_ref = db_client.collection("insights").document(insight_id)
+                        
+                        # Prepare the complete insight data with wallet pass information
+                        insight_doc_data = insight_data.copy()
+                        insight_doc_data.update({
+                            "wallet_object_id": wallet_result.get("object_id"),
+                            "wallet_class_id": wallet_result.get("class_id"),
+                            "wallet_state": wallet_result.get("wallet_state"),
+                            "wallet_created_at": datetime.now(),
+                            "wallet_save_url": wallet_result.get("save_url")
+                        })
+                        
+                        # Set the document (this will create it if it doesn't exist)
+                        insight_ref.set(insight_doc_data)
+                        self.logger.info("✅ Firestore updated with insight and wallet pass info")
+                    except Exception as db_error:
+                        self.logger.warning(f"⚠️ Failed to update Firestore: {db_error}")
+                
+                self.logger.info(f"✅ Wallet pass generated successfully for insight: {insight_id}")
+                return wallet_result
+                
+            except Exception as wallet_error:
+                self.logger.error(f"❌ WalletService error: {wallet_error}")
+                return {"error": f"Failed to generate wallet pass: {str(wallet_error)}"}
             
         except Exception as e:
             self.logger.error(f"❌ Error generating wallet pass: {e}")
             return {"error": str(e)}
     
     async def get_wallet_passes(self, user_id: str, active_only: bool = True) -> List[Dict]:
-        """Get wallet passes for a user"""
+        """Get wallet passes for a user from Firestore"""
         try:
             self.logger.info(f"💳 Getting wallet passes for user: {user_id}")
             
-            user_passes = self._wallet_passes_cache.get(user_id, [])
+            # Check if wallet service is available
+            if not WalletService.is_wallet_available():
+                self.logger.warning("❌ Wallet service not available")
+                return []
             
-            if active_only:
-                # Filter out expired passes
-                current_time = datetime.now()
-                user_passes = [
-                    p for p in user_passes 
-                    if datetime.fromisoformat(p["expires_at"]) > current_time
-                ]
+            wallet_passes = []
             
-            # If no passes exist, create some sample passes
-            if not user_passes:
-                user_passes = await self._create_sample_wallet_passes(user_id)
-                self._wallet_passes_cache[user_id] = user_passes
+            if is_firebase_initialized():
+                try:
+                    db_client = get_firestore_client()
+                    
+                    # Simplified query that doesn't require composite index
+                    # Query all insights for the user first, then filter in memory
+                    insights_query = (db_client.collection("insights")
+                                    .where("user_id", "==", user_id))
+                    
+                    insights_docs = insights_query.stream()
+                    
+                    for insight_doc in insights_docs:
+                        insight_data = insight_doc.to_dict()
+                        
+                        # Filter for insights that have wallet passes
+                        if not insight_data.get("wallet_object_id"):
+                            continue
+                            
+                        # Check if active only and wallet state
+                        if active_only and insight_data.get("wallet_state") != "ACTIVE":
+                            continue
+                        
+                        # Check if the wallet pass is still valid (not expired)
+                        if active_only and insight_data.get("expires_at"):
+                            expires_at = insight_data["expires_at"]
+                            if isinstance(expires_at, str):
+                                expires_at = datetime.fromisoformat(expires_at)
+                            if expires_at < datetime.now():
+                                continue
+                        
+                        # Create wallet pass summary
+                        wallet_pass = {
+                            "pass_id": insight_data.get("wallet_object_id"),
+                            "insight_id": insight_doc.id,
+                            "title": insight_data.get("title", "Spending Insight"),
+                            "description": insight_data.get("description", ""),
+                            "priority": insight_data.get("priority", "medium"),
+                            "save_url": insight_data.get("wallet_save_url"),
+                            "created_at": insight_data.get("wallet_created_at"),
+                            "wallet_state": insight_data.get("wallet_state", "ACTIVE"),
+                            "insight_type": insight_data.get("insight_type"),
+                            "amount_impact": insight_data.get("amount_impact"),
+                            "category": insight_data.get("category"),
+                            "background_color": self._get_pass_color(insight_data.get("priority", "medium"))
+                        }
+                        
+                        wallet_passes.append(wallet_pass)
+                    
+                    self.logger.info(f"✅ Found {len(wallet_passes)} wallet passes for user {user_id}")
+                    
+                except Exception as db_error:
+                    self.logger.error(f"❌ Database error getting wallet passes: {db_error}")
+                    # Return empty list instead of failing
+                    return []
             
-            return user_passes
+            # Sort by creation date (newest first)
+            wallet_passes.sort(key=lambda x: x.get("created_at", datetime.min), reverse=True)
+            
+            return wallet_passes
             
         except Exception as e:
             self.logger.error(f"❌ Error getting wallet passes: {e}")
+            return []
             return []
     
     async def _create_sample_wallet_passes(self, user_id: str) -> List[Dict]:

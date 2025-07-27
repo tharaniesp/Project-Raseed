@@ -88,23 +88,34 @@ const InsightsPage = () => {
       console.log('💳 Generating wallet pass for insight:', insightId);
       const result = await insightsService.generateWalletPass(insightId);
       
-      if (result.success || result.pass_url) {
-        // Open Google Wallet or show success message
-        if (result.pass_url) {
-          window.open(result.pass_url, '_blank');
-        }
+      console.log('💳 Wallet pass result:', result);
+      
+      if (result.success && result.wallet_pass?.save_url) {
+        // Show immediate feedback
+        console.log('🎫 Wallet pass created successfully!');
         
-        // Show success message
-        alert('Wallet pass created successfully!');
+        // Open Google Wallet save URL immediately after creation
+        console.log('🔗 Opening Google Wallet save URL:', result.wallet_pass.save_url);
+        window.open(result.wallet_pass.save_url, '_blank', 'noopener,noreferrer');
+        
+        // Show success message with instructions
+        alert('🎫 Wallet pass created! \n\n📱 Google Wallet will open in a new tab. \n✅ Follow the prompts to save the pass to your wallet.');
         
         // Refresh data to update pass status
         await loadInsightsData();
+      } else if (result.save_url) {
+        // Handle direct save_url format (fallback)
+        console.log('🔗 Opening Google Wallet save URL (direct):', result.save_url);
+        window.open(result.save_url, '_blank', 'noopener,noreferrer');
+        
+        alert('🎫 Wallet pass created! \n\n📱 Google Wallet will open in a new tab. \n✅ Follow the prompts to save the pass to your wallet.');
+        await loadInsightsData();
       } else {
-        throw new Error(result.error || 'Failed to generate wallet pass');
+        throw new Error(result.error || 'Failed to generate wallet pass - no save URL received');
       }
     } catch (error) {
       console.error('❌ Failed to generate wallet pass:', error);
-      alert('Failed to generate wallet pass. Please try again.');
+      alert('❌ Failed to generate wallet pass. Please try again.');
     }
   };
 

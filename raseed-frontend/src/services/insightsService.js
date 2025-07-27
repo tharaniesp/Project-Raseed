@@ -75,18 +75,24 @@ class InsightsService {
       const response = await this.api.post(`/api/insights/${insightId}/wallet-pass`);
       console.log('✅ Wallet pass generated:', response);
       
-      return response.data || response;
+      // Return the response data
+      const result = response.data || response;
+      
+      // Validate the response has the required save_url
+      if (result.success && result.wallet_pass?.save_url) {
+        console.log('✅ Valid wallet pass response with save_url');
+        return result;
+      } else if (result.save_url) {
+        // Handle direct save_url format
+        console.log('✅ Valid wallet pass response with direct save_url');
+        return result;
+      } else {
+        throw new Error('Invalid response: missing save_url');
+      }
       
     } catch (error) {
       console.error('❌ Error generating wallet pass:', error);
-      
-      // Return mock success for development
-      return {
-        success: true,
-        pass_url: `https://wallet.google.com/pass/demo-${insightId}`,
-        message: 'Demo wallet pass created successfully',
-        pass_id: `pass_${Date.now()}`
-      };
+      throw error; // Re-throw the error instead of returning mock data
     }
   }
 

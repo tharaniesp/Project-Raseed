@@ -156,11 +156,23 @@ async def create_wallet_pass_from_insight(
     try:
         pass_result = await insights_service.generate_wallet_pass(insight_id)
         
+        # Check if there was an error in wallet pass generation
+        if "error" in pass_result:
+            return {
+                "success": False,
+                "error": pass_result["error"],
+                "message": f"Failed to create wallet pass: {pass_result['error']}"
+            }
+        
         return {
             "success": True,
             "wallet_pass": pass_result,
-            "pass_url": pass_result.get("pass_url"),
-            "message": "Wallet pass created successfully"
+            "save_url": pass_result.get("save_url"),  # Also include at top level for easier access
+            "object_id": pass_result.get("object_id"),
+            "message": "Wallet pass created successfully! Click the link to save it to your Google Wallet.",
+            "instructions": "The wallet pass has been created. You will be redirected to Google Wallet to save it.",
+            "pass_type": "insight",
+            "insight_id": insight_id
         }
         
     except Exception as e:

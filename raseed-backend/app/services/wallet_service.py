@@ -687,3 +687,244 @@ class WalletService:
         except Exception as e:
             logger.error(f"❌ Shopping list wallet pass creation failed: {e}")
             raise e
+
+    @staticmethod
+    async def generate_pass_for_insight(insight_data: dict) -> dict:
+        """Generate Google Wallet pass for spending insights"""
+        logger.info(f"🧠 Starting Wallet pass generation for insight: {insight_data.get('insight_id')}")
+
+        # Check availability first
+        if not WalletService.is_wallet_available():
+            raise Exception("Google Wallet API not available - check configuration")
+
+        # Step 1: Validate insight data
+        try:
+            insight_id = insight_data.get('insight_id')
+            if not insight_id:
+                raise Exception("Insight ID is required")
+            
+            if not insight_data.get('title'):
+                raise Exception("Insight title is required")
+            
+            logger.info(f"✅ Insight validated: {insight_data.get('title')}")
+        except Exception as e:
+            logger.error(f"❌ Insight validation failed: {e}")
+            raise
+
+        # Step 2: Initialize Wallet client
+        try:
+            wallet_service = WalletService.get_wallet_client()
+            logger.info("✅ Wallet service client ready")
+        except Exception as e:
+            logger.error(f"❌ Wallet client initialization failed: {e}")
+            raise
+
+        # Step 3: Build class and object IDs
+        issuer_id = WalletService.get_issuer_id()
+        class_suffix = "raseed_insight_class"
+        class_id = f"{issuer_id}.{class_suffix}"
+        object_suffix = f"insight_{insight_id}_{uuid.uuid4().hex[:8]}"
+        object_id = f"{issuer_id}.{object_suffix}"
+        
+        logger.info(f"📝 Creating insight pass: {insight_data.get('title')}")
+
+        # Step 4: Ensure the class exists
+        try:
+            await WalletService.ensure_insight_class_exists(wallet_service, class_id)
+        except Exception as e:
+            logger.error(f"❌ Class creation/verification failed: {e}")
+            raise
+
+        # Step 5: Create insight wallet object
+        try:
+            insight_object = WalletService.create_insight_wallet_object(insight_data, object_id, class_id)
+            logger.info(f"📦 Insight wallet object created")
+        except Exception as e:
+            logger.error(f"❌ Insight object creation failed: {e}")
+            raise
+
+        # Step 6: Create the object via API
+        try:
+            logger.info(f"🎫 Creating Insight Generic object: {object_id}")
+            response = wallet_service.genericobject().insert(body=insight_object).execute()
+            logger.info(f"✅ Insight Generic object created successfully")
+        except HttpError as e:
+            error_details = e.content.decode() if hasattr(e, 'content') else str(e)
+            logger.error(f"❌ Insight object creation failed: {error_details}")
+            raise Exception(f"Failed to create insight wallet object: {error_details}")
+
+        # Step 7: Create minimal JWT
+        try:
+            logger.info("🔐 Creating JWT for insight pass...")
+            service_account_info = WalletService.get_service_account_credentials()
+            signed_jwt = WalletService.create_minimal_jwt(object_id, class_id, service_account_info)
+            logger.info("✅ Insight pass JWT signed successfully")
+        except Exception as e:
+            logger.error(f"❌ JWT creation failed: {e}")
+            raise Exception(f"Failed to create signed JWT: {str(e)}")
+
+        # Step 8: Generate save URL
+        save_url = f"https://pay.google.com/gp/v/save/{signed_jwt}"
+        
+        result = {
+            "save_url": save_url,
+            "object_id": object_id,
+            "class_id": class_id,
+            "wallet_state": "ACTIVE",
+            "jwt_length": len(signed_jwt),
+            "insight_type": insight_data.get('insight_type'),
+            "priority": insight_data.get('priority')
+        }
+        
+        logger.info(f"🎉 Insight wallet pass generation completed!")
+        logger.info(f"📊 Insight type: {result['insight_type']}")
+        logger.info(f"🔗 Save URL: {save_url}")
+        logger.info(f"📝 Object ID: {object_id}")
+        logger.info(f"ℹ️  Next step: User should visit the save_url to add the pass to their Google Wallet")
+        
+        return result
+
+    @staticmethod
+    def create_insight_wallet_object(insight_data: dict, object_id: str, class_id: str) -> dict:
+        """Create wallet object for spending insights"""
+        
+        # Format actionable suggestions
+        suggestions = insight_data.get('actionable_suggestions', [])
+        suggestions_text = "\n".join([f"• {suggestion}" for suggestion in suggestions[:5]])  # Limit to 5 suggestions
+        
+        # Format amount impact
+        amount_text = ""
+        if insight_data.get('amount_impact'):
+            amount_text = f"${insight_data['amount_impact']:.2f} impact"
+        elif insight_data.get('percentage_change'):
+            amount_text = f"{insight_data['percentage_change']:.1f}% change"
+        
+        # Get priority color
+        priority_colors = {
+            "urgent": "#FF4444",
+            "high": "#FF8800", 
+            "medium": "#4285F4",
+            "low": "#00AA44"
+        }
+        background_color = priority_colors.get(insight_data.get('priority', 'medium'), "#4285F4")
+        
+        # Create text modules
+        text_modules = [
+            {
+                "header": "Insight Details",
+                "body": insight_data.get('description', 'No description available'),
+                "id": "description"
+            }
+        ]
+        
+        if suggestions_text:
+            text_modules.append({
+                "header": "Actionable Tips",
+                "body": suggestions_text,
+                "id": "suggestions"
+            })
+        
+        # Add category/merchant info if available
+        info_parts = []
+        if insight_data.get('category'):
+            info_parts.append(f"Category: {insight_data['category']}")
+        if insight_data.get('merchant'):
+            info_parts.append(f"Merchant: {insight_data['merchant']}")
+        if insight_data.get('time_period'):
+            info_parts.append(f"Period: {insight_data['time_period']}")
+            
+        if info_parts:
+            text_modules.append({
+                "header": "Context",
+                "body": "\n".join(info_parts),
+                "id": "context"
+            })
+        
+        # Enhanced wallet object for insights
+        wallet_object = {
+            "id": object_id,
+            "classId": class_id,
+            "state": "ACTIVE",
+            "genericType": "GENERIC_TYPE_UNSPECIFIED",
+            
+            "cardTitle": {
+                "defaultValue": {
+                    "language": "en-US",
+                    "value": insight_data.get('title', 'Spending Insight')
+                }
+            },
+            
+            "header": {
+                "defaultValue": {
+                    "language": "en-US", 
+                    "value": amount_text or insight_data.get('insight_type', 'Insight').replace('_', ' ').title()
+                }
+            },
+            
+            "subheader": {
+                "defaultValue": {
+                    "language": "en-US",
+                    "value": f"{insight_data.get('priority', 'medium').title()} Priority • {datetime.datetime.now().strftime('%b %d, %Y')}"
+                }
+            },
+            
+            "textModulesData": text_modules,
+            
+            "barcode": {
+                "type": "QR_CODE",
+                "value": f"raseed://insight/{insight_data.get('insight_id')}",
+                "alternateText": insight_data.get('insight_id', '')[:8]
+            },
+            
+            "hexBackgroundColor": background_color,
+            
+            "linksModuleData": {
+                "uris": [
+                    {
+                        "uri": f"http://localhost:3000/insights",
+                        "description": "View All Insights",
+                        "id": "insights_details"
+                    }
+                ]
+            }
+        }
+        
+        return wallet_object
+
+    @staticmethod
+    async def ensure_insight_class_exists(wallet_service, class_id: str):
+        """Ensure the insight generic class exists, create if it doesn't"""
+        try:
+            existing_class = wallet_service.genericclass().get(resourceId=class_id).execute()
+            logger.info(f"📦 Using existing Insight class: {class_id}")
+            return existing_class
+        except HttpError as e:
+            if e.resp.status == 404:
+                logger.info(f"📦 Creating new Insight class: {class_id}")
+                class_payload = {
+                    "id": class_id,
+                    "issuerName": "Project Raseed Insights",
+                    "reviewStatus": "UNDER_REVIEW",
+                    "hexBackgroundColor": "#4285F4",
+                    "logo": {
+                        "sourceUri": {
+                            "uri": "https://your-app.com/logo.png"
+                        },
+                        "contentDescription": {
+                            "defaultValue": {
+                                "language": "en-US",
+                                "value": "Project Raseed Insights Logo"
+                            }
+                        }
+                    }
+                }
+                try:
+                    create_response = wallet_service.genericclass().insert(body=class_payload).execute()
+                    logger.info(f"✅ Insight class created successfully: {create_response.get('id')}")
+                    return create_response
+                except Exception as create_error:
+                    logger.error(f"❌ Failed to create Insight class: {create_error}")
+                    raise Exception(f"Could not create Insight class: {str(create_error)}")
+            else:
+                logger.error(f"❌ Error checking Insight class: {e}")
+                raise Exception(f"Insight class check failed: {str(e)}")

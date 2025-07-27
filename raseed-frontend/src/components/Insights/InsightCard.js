@@ -41,9 +41,15 @@ const InsightCard = ({ insight, onGeneratePass }) => {
     
     setIsGeneratingPass(true);
     try {
+      console.log('💳 Creating wallet pass for insight:', insight.insight_id);
+      
+      // Call the parent function which handles the API call and redirection
       await onGeneratePass(insight.insight_id);
+      
+      console.log('✅ Wallet pass creation completed');
     } catch (error) {
-      console.error('Failed to generate pass:', error);
+      console.error('❌ Failed to generate pass:', error);
+      alert('❌ Failed to create wallet pass. Please try again.');
     } finally {
       setIsGeneratingPass(false);
     }
@@ -92,12 +98,12 @@ const InsightCard = ({ insight, onGeneratePass }) => {
               {isGeneratingPass ? (
                 <>
                   <RefreshCw className="btn-icon spin" />
-                  Creating...
+                  Creating Pass...
                 </>
               ) : (
                 <>
                   <Wallet className="btn-icon" />
-                  Add to Wallet
+                  Save to Wallet
                 </>
               )}
             </button>

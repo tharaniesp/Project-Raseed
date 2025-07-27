@@ -178,9 +178,8 @@ class ReceiptService:
             if not db:
                 return []
             
-            # Query Firestore
+            # Query Firestore - temporarily remove order_by to debug index issues
             query = (db.collection(settings.FIRESTORE_COLLECTION_RECEIPTS)
-                    .order_by('created_at', direction='DESCENDING')
                     .limit(limit)
                     .offset(offset))
             

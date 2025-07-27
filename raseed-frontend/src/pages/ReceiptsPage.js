@@ -5,7 +5,7 @@ import { useReceipt } from '../context/ReceiptContext';
 import ReceiptCard from '../components/Receipt/ReceiptCard';
 
 const ReceiptsPage = () => {
-  const { receipts, loading, error, actions } = useReceipt();
+  const { receipts, loading, error, actions, newlyAddedReceipts } = useReceipt();
   const [searchTerm, setSearchTerm] = useState('');
   const [sortBy, setSortBy] = useState('date');
 
@@ -72,13 +72,14 @@ const ReceiptsPage = () => {
       </div>
 
       {/* Debug Info */}
-      {/* <div className="debug-info">
+      <div className="debug-info">
         <strong>Debug Info:</strong> 
         Loading: {loading.toString()}, 
         Error: {error || 'none'}, 
         Receipts Count: {receipts.length}, 
-        Filtered Count: {filteredReceipts.length}
-      </div> */}
+        Filtered Count: {filteredReceipts.length},
+        Newly Added: {Array.from(newlyAddedReceipts).length}
+      </div>
 
       {/* Search and Filter */}
       <div className="receipts-controls">

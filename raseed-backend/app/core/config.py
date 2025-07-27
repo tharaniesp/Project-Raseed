@@ -24,7 +24,7 @@ class Settings(BaseSettings):
     FIREBASE_PRIVATE_KEY: str = ""
     FIREBASE_CLIENT_EMAIL: str = ""
     FIREBASE_STORAGE_BUCKET: str = ""
-    FIREBASE_SERVICE_ACCOUNT_PATH: str = ""
+    FIREBASE_SERVICE_ACCOUNT_PATH: str = "firebase-service-account.json"
     
     # File Upload Settings
     MAX_FILE_SIZE: int = 10 * 1024 * 1024  # 10MB
@@ -34,7 +34,7 @@ class Settings(BaseSettings):
     ]
     
     # AI/ML Configuration (Step 2)
-    GEMINI_API_KEY: str = "AIzaSyDc07PX6qoo0XpEfOE1UERcnsF0lOXL8Mk"
+    GEMINI_API_KEY: str = "AIzaSyB64T-imb32pOnqGKOiB5FIC5SbdDZLfaE"
     OPENAI_API_KEY: str = ""
     
     # AI Processing Settings
@@ -45,6 +45,10 @@ class Settings(BaseSettings):
     USE_VERTEX_AI: bool = False  # Disabled - publisher models not accessible
     USE_GENERATIVE_AI: bool = True  # Enabled - works with API key
     GENERATIVE_AI_MODEL: str = "gemini-1.5-flash"  # Confirmed working model
+    
+    # AI Fallback Configuration
+    ENABLE_AI_FALLBACK_MODE: bool = True  # Enable fallback responses when AI quota exceeded
+    FORCE_FALLBACK_MODE: bool = False  # Force fallback mode (for testing or quota issues) - CHANGED TO FALSE
     
     # Vertex AI Configuration (Fallback - currently not working for this project)
     VERTEX_AI_LOCATION: str = "us-central1"
@@ -59,6 +63,16 @@ class Settings(BaseSettings):
     # Google Wallet Configuration (Step 3)
     GOOGLE_WALLET_ISSUER_ID: str = "3388000000022971806"
     AUTO_GENERATE_WALLET_PASS: bool = True 
+    
+    # Document AI Configuration (Enhanced Receipt Processing)
+    DOCUMENT_AI_LOCATION: str = "us"
+    DOCUMENT_AI_RECEIPT_PROCESSOR_ID: str = ""
+    DOCUMENT_AI_INVOICE_PROCESSOR_ID: str = ""
+    DOCUMENT_AI_FORM_PROCESSOR_ID: str = ""
+    
+    # Google Cloud Configuration
+    GOOGLE_CLOUD_PROJECT: str = ""
+    GOOGLE_APPLICATION_CREDENTIALS: str = ""
     
     # Document AI Configuration (Enhanced Receipt Processing)
     DOCUMENT_AI_LOCATION: str = "us"

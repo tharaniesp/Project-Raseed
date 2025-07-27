@@ -3,6 +3,7 @@ from fastapi import APIRouter, File, UploadFile, HTTPException, Query, WebSocket
 from typing import List
 import logging
 import json
+import asyncio
 
 from app.services.receipt_service import ReceiptService
 from app.services.notification_service import websocket_manager
@@ -35,7 +36,12 @@ websocket_router = APIRouter()
 
 @websocket_router.websocket("/ws/{user_id}")
 async def websocket_endpoint(websocket: WebSocket, user_id: str):
-    """WebSocket endpoint for real-time notifications"""
+    """WebSocket endpoint for real-time notifications with improved connection handling"""
+    
+    # Accept the connection first
+    await websocket.accept()
+    
+    # Connect to manager
     await websocket_manager.connect(websocket, user_id)
     
     try:
@@ -52,12 +58,16 @@ async def websocket_endpoint(websocket: WebSocket, user_id: str):
         while True:
             try:
                 # Wait for any message from client (ping/pong for keep-alive)
-                data = await websocket.receive_text()
+                # Add timeout to prevent hanging
+                data = await asyncio.wait_for(websocket.receive_text(), timeout=300.0)  # 5 minute timeout
                 message = json.loads(data)
                 
                 # Handle different message types
                 if message.get("type") == "ping":
-                    await websocket.send_text(json.dumps({"type": "pong", "timestamp": "2025-07-26T10:30:00Z"}))
+                    await websocket.send_text(json.dumps({
+                        "type": "pong", 
+                        "timestamp": "2025-07-26T10:30:00Z"
+                    }))
                 elif message.get("type") == "subscribe":
                     # Handle subscription to specific notification types
                     await websocket.send_text(json.dumps({
@@ -65,16 +75,40 @@ async def websocket_endpoint(websocket: WebSocket, user_id: str):
                         "channels": message.get("channels", []),
                         "timestamp": "2025-07-26T10:30:00Z"
                     }))
+                elif message.get("type") == "heartbeat":
+                    # Respond to heartbeat to keep connection alive
+                    await websocket.send_text(json.dumps({
+                        "type": "heartbeat_ack",
+                        "timestamp": "2025-07-26T10:30:00Z"
+                    }))
                     
+            except asyncio.TimeoutError:
+                # Send ping to keep connection alive
+                try:
+                    await websocket.send_text(json.dumps({
+                        "type": "ping",
+                        "timestamp": "2025-07-26T10:30:00Z"
+                    }))
+                except Exception:
+                    # Connection lost, break the loop
+                    break
             except WebSocketDisconnect:
+                logger.info(f"🔌 WebSocket disconnected normally for user {user_id}")
                 break
             except json.JSONDecodeError:
                 # Send error for invalid JSON
-                await websocket.send_text(json.dumps({
-                    "type": "error",
-                    "message": "Invalid JSON format",
-                    "timestamp": "2025-07-26T10:30:00Z"
-                }))
+                try:
+                    await websocket.send_text(json.dumps({
+                        "type": "error",
+                        "message": "Invalid JSON format",
+                        "timestamp": "2025-07-26T10:30:00Z"
+                    }))
+                except Exception:
+                    # Connection lost, break the loop
+                    break
+            except Exception as e:
+                logger.error(f"❌ WebSocket error for user {user_id}: {e}")
+                break
                 
     except WebSocketDisconnect:
         logger.info(f"🔌 WebSocket disconnected for user {user_id}")
@@ -98,13 +132,14 @@ async def websocket_status(user_id: str):
 async def notification_system_status():
     """Check the overall status of the notification system"""
     total_connections = sum(len(connections) for connections in websocket_manager.active_connections.values())
-    connected_users = list(websocket_manager.active_connections.keys())
     
     return {
-        "system_status": "active",
+        "status": "healthy",
         "total_connections": total_connections,
-        "connected_users": connected_users,
-        "websocket_manager_available": True,
+        "active_users": len(websocket_manager.active_connections),
+        "websocket_enabled": True,
+        "fcm_enabled": True,
+        "email_enabled": False,
         "timestamp": "2025-07-26T10:30:00Z"
     }
 

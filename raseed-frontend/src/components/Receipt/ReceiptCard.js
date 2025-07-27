@@ -1,16 +1,20 @@
 // src/components/Receipt/ReceiptCard.js - Complete Update with Auto Wallet Integration
 import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { 
-  Calendar, DollarSign, MapPin, FileText, Eye, Download, Brain, 
+  Calendar, DollarSign, MapPin, FileText, Eye, Brain, 
   Loader, CheckCircle, AlertTriangle, CreditCard, ExternalLink, 
-  Clock, Zap 
+  Clock, Zap, MessageSquare, Sparkles
 } from 'lucide-react';
 import { receiptService } from '../../services/receiptService';
+import { useReceipt } from '../../context/ReceiptContext';
 import WalletButton from './WalletButton';
 
 const ReceiptCard = ({ receipt }) => {
   const [processing, setProcessing] = useState(false);
   const [localReceipt, setLocalReceipt] = useState(receipt);
+  const navigate = useNavigate();
+  const { newlyAddedReceipts } = useReceipt();
 
   console.log('🎫 ReceiptCard received:', localReceipt);
 
@@ -44,15 +48,16 @@ const ReceiptCard = ({ receipt }) => {
     }
   };
 
-  const handleDownload = () => {
-    if (localReceipt.download_url) {
-      const link = document.createElement('a');
-      link.href = localReceipt.download_url;
-      link.download = localReceipt.file_metadata?.original_filename || 
-                     localReceipt.file_metadata?.filename || 
-                     'receipt';
-      link.click();
-    }
+
+
+  const handleAskQuestions = () => {
+    // Navigate to query page with receipt context
+    navigate('/query', { 
+      state: { 
+        selectedReceipt: localReceipt,
+        context: `Receipt from ${localReceipt.extracted_data?.merchant_name || getFileName()}`
+      }
+    });
   };
 
   const handleProcessWithAI = async () => {
@@ -132,6 +137,12 @@ const ReceiptCard = ({ receipt }) => {
                 Auto Pass
               </span>
             )}
+            {newlyAddedReceipts.has(localReceipt.id) && (
+              <span className="status-badge status-new">
+                <Sparkles size={12} />
+                New
+              </span>
+            )}
           </div>
         </div>
         
@@ -143,12 +154,14 @@ const ReceiptCard = ({ receipt }) => {
           >
             <Eye size={16} />
           </button>
+          
+          {/* Ask Questions Button */}
           <button 
-            onClick={handleDownload}
+            onClick={handleAskQuestions}
             className="action-btn"
-            title="Download"
+            title="Ask Questions"
           >
-            <Download size={16} />
+            <MessageSquare size={16} />
           </button>
           
           {/* AI Processing Button - Step 2 */}

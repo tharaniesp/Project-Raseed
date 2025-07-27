@@ -139,10 +139,7 @@ dist/
 ehthumbs.db
 Thumbs.db
 
-# Firebase and credentials
-firebase-service-account.json
-project-raseed-990b0-firebase-adminsdk-fbsvc-3470233023.json
-*.json
+
 *.key
 *.pem
 

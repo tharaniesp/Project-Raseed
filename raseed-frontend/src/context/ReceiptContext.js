@@ -9,7 +9,8 @@ const initialState = {
   loading: false,
   error: null,
   backendStatus: 'unknown',
-  totalReceipts: 0
+  totalReceipts: 0,
+  newlyAddedReceipts: new Set() // Track newly added receipt IDs
 };
 
 // Action types
@@ -21,7 +22,9 @@ const ACTIONS = {
   UPDATE_RECEIPT: 'UPDATE_RECEIPT',
   SET_CURRENT_RECEIPT: 'SET_CURRENT_RECEIPT',
   SET_BACKEND_STATUS: 'SET_BACKEND_STATUS',
-  CLEAR_ERROR: 'CLEAR_ERROR'
+  CLEAR_ERROR: 'CLEAR_ERROR',
+  MARK_RECEIPT_ADDED: 'MARK_RECEIPT_ADDED',
+  CLEAR_NEWLY_ADDED: 'CLEAR_NEWLY_ADDED'
 };
 
 // Reducer
@@ -41,19 +44,39 @@ function receiptReducer(state, action) {
     
     case ACTIONS.SET_RECEIPTS:
       console.log('📋 Setting receipts:', action.payload);
+      
+      // Preserve newly added receipts when loading from backend
+      const backendReceipts = action.payload.receipts || [];
+      const newlyAddedReceipts = state.newlyAddedReceipts;
+      
+      // Filter out newly added receipts from backend data to avoid duplicates
+      const filteredBackendReceipts = backendReceipts.filter(receipt => 
+        !newlyAddedReceipts.has(receipt.id)
+      );
+      
+      // Get newly added receipts that are still in the state
+      const preservedNewReceipts = state.receipts.filter(receipt => 
+        newlyAddedReceipts.has(receipt.id)
+      );
+      
+      // Combine backend receipts with preserved newly added receipts
+      const combinedReceipts = [...preservedNewReceipts, ...filteredBackendReceipts];
+      
       return { 
         ...state, 
-        receipts: action.payload.receipts || [],
-        totalReceipts: action.payload.total || action.payload.receipts?.length || 0,
+        receipts: combinedReceipts,
+        totalReceipts: action.payload.total || combinedReceipts.length,
         loading: false 
       };
     
     case ACTIONS.ADD_RECEIPT:
       console.log('➕ Adding receipt:', action.payload);
+      const newReceiptId = action.payload.id;
       return { 
         ...state, 
         receipts: [action.payload, ...state.receipts],
-        totalReceipts: state.totalReceipts + 1
+        totalReceipts: state.totalReceipts + 1,
+        newlyAddedReceipts: new Set([...state.newlyAddedReceipts, newReceiptId])
       };
     
     case ACTIONS.UPDATE_RECEIPT:
@@ -73,6 +96,18 @@ function receiptReducer(state, action) {
     case ACTIONS.SET_BACKEND_STATUS:
       console.log('🔗 Backend status:', action.payload);
       return { ...state, backendStatus: action.payload };
+    
+    case ACTIONS.MARK_RECEIPT_ADDED:
+      return {
+        ...state,
+        newlyAddedReceipts: new Set([...state.newlyAddedReceipts, action.payload])
+      };
+    
+    case ACTIONS.CLEAR_NEWLY_ADDED:
+      return {
+        ...state,
+        newlyAddedReceipts: new Set()
+      };
     
     default:
       return state;
@@ -201,7 +236,9 @@ export function ReceiptProvider({ children }) {
       updateReceipt,
       setCurrentReceipt,
       clearError,
-      checkBackendStatus
+      checkBackendStatus,
+      markReceiptAdded: (receiptId) => dispatch({ type: ACTIONS.MARK_RECEIPT_ADDED, payload: receiptId }),
+      clearNewlyAdded: () => dispatch({ type: ACTIONS.CLEAR_NEWLY_ADDED })
     }
   };
 

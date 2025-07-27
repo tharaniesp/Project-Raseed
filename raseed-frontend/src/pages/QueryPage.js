@@ -1,16 +1,18 @@
 // src/pages/QueryPage.js - Improved UI with Clean Dropdowns
 import React, { useState, useEffect, useRef } from 'react';
+import { useLocation } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown'; 
 import { 
   MessageSquare, Send, Lightbulb, Globe, Brain, CreditCard, 
   Loader, Mic, MicOff, Languages, ChevronDown,
   ShoppingCart, ChefHat, Package, TrendingUp, ExternalLink,
-  Sparkles, Zap
+  Sparkles, Zap, Receipt
 } from 'lucide-react';
 import { receiptService } from '../services/receiptService';
 import { useReceipt } from '../context/ReceiptContext';
 
 const QueryPage = () => {
+  const location = useLocation();
   const { receipts, loading: receiptsLoading, error: receiptsError } = useReceipt();
   const [query, setQuery] = useState('');
   const [messages, setMessages] = useState([]);
@@ -20,7 +22,39 @@ const QueryPage = () => {
   const [vertexAiStatus, setVertexAiStatus] = useState(null);
   const [queryStats, setQueryStats] = useState(null);
   const [selectedCategory, setSelectedCategory] = useState('cooking');
+  const [selectedReceipt, setSelectedReceipt] = useState(null);
   const messagesEndRef = useRef(null);
+
+  // Handle receipt context from navigation
+  useEffect(() => {
+    if (location.state?.selectedReceipt) {
+      const receipt = location.state.selectedReceipt;
+      setSelectedReceipt(receipt);
+      
+      // Pre-fill query with receipt context
+      const merchantName = receipt.extracted_data?.merchant_name || 'this receipt';
+      const amount = receipt.extracted_data?.total_amount;
+      const date = receipt.extracted_data?.receipt_date || receipt.created_at;
+      
+      let contextQuery = `Tell me about ${merchantName}`;
+      if (amount) {
+        contextQuery += ` (amount: $${amount})`;
+      }
+      if (date) {
+        contextQuery += ` from ${new Date(date).toLocaleDateString()}`;
+      }
+      
+      setQuery(contextQuery);
+      
+      // Add a system message about the receipt context
+      const contextMessage = {
+        type: 'system',
+        content: `📄 You're asking about a receipt from ${merchantName}. You can ask questions about the items purchased, merchant details, or get cooking suggestions based on the ingredients.`,
+        timestamp: new Date()
+      };
+      setMessages([contextMessage]);
+    }
+  }, [location.state]);
 
   // Language options - Enhanced with Indian languages
   const languages = [
@@ -172,19 +206,36 @@ const QueryPage = () => {
         items: receipt.extracted_data?.items || []
       }));
 
+      // If a specific receipt is selected, prioritize it in the context
+      let contextData = {
+        receipts_data: receiptData,
+        receipts_count: receipts.length
+      };
+
+      if (selectedReceipt) {
+        contextData.selected_receipt = {
+          receipt_id: selectedReceipt.id,
+          merchant: selectedReceipt.extracted_data?.merchant_name || 'Unknown Merchant',
+          total_amount: selectedReceipt.extracted_data?.total_amount || 0,
+          items: selectedReceipt.extracted_data?.items || [],
+          date: selectedReceipt.created_at,
+          receipt_date: selectedReceipt.extracted_data?.receipt_date,
+          category: selectedReceipt.extracted_data?.category || 'general'
+        };
+        contextData.focus_on_receipt = selectedReceipt.id;
+      }
+
       console.log('📊 Sending receipt data to AI agent:', {
         receiptsCount: receipts.length,
-        receiptData: receiptData
+        selectedReceipt: selectedReceipt?.id,
+        contextData: contextData
       });
 
       const response = await receiptService.processNaturalLanguageQuery({
         query: query,
         language: selectedLanguage === 'auto' ? null : selectedLanguage,
         user_id: 'current_user',
-        context: {
-          receipts_data: receiptData,
-          receipts_count: receipts.length
-        }
+        context: contextData
       });
 
       const aiMessage = {
@@ -345,6 +396,74 @@ const QueryPage = () => {
         Receipts Count: {receipts.length}, 
         Receipts with Data: {receipts.filter(r => r.extracted_data).length}
       </div> */}
+
+      {/* Receipt Context Indicator */}
+      {selectedReceipt && (
+        <div style={{
+          background: 'linear-gradient(135deg, #eff6ff, #dbeafe)',
+          border: '2px solid #3b82f6',
+          borderRadius: '12px',
+          padding: '1.5rem',
+          marginBottom: '2rem',
+          display: 'flex',
+          alignItems: 'center',
+          gap: '1rem'
+        }}>
+          <Receipt style={{ color: '#3b82f6' }} size={24} />
+          <div style={{ flex: 1 }}>
+            <h3 style={{ 
+              fontWeight: '600', 
+              color: '#1e40af', 
+              margin: '0 0 0.5rem 0',
+              fontSize: '1.1rem'
+            }}>
+              📄 Receipt Context Active
+            </h3>
+            <p style={{ 
+              fontSize: '0.95rem', 
+              color: '#374151', 
+              margin: '0 0 0.5rem 0'
+            }}>
+              You're asking about a receipt from <strong>{selectedReceipt.extracted_data?.merchant_name || 'Unknown Merchant'}</strong>
+              {selectedReceipt.extracted_data?.total_amount && (
+                <span> (${selectedReceipt.extracted_data.total_amount})</span>
+              )}
+            </p>
+            <div style={{ 
+              display: 'flex', 
+              gap: '1rem', 
+              flexWrap: 'wrap',
+              fontSize: '0.875rem',
+              color: '#6b7280'
+            }}>
+              <span>📅 {new Date(selectedReceipt.created_at).toLocaleDateString()}</span>
+              {selectedReceipt.extracted_data?.items?.length > 0 && (
+                <span>🛒 {selectedReceipt.extracted_data.items.length} items</span>
+              )}
+              <span>🎯 Ask about items, recipes, or merchant details</span>
+            </div>
+          </div>
+          <button 
+            onClick={() => {
+              setSelectedReceipt(null);
+              setMessages([]);
+              setQuery('');
+            }}
+            style={{
+              background: 'white',
+              border: '1px solid #3b82f6',
+              color: '#3b82f6',
+              borderRadius: '6px',
+              padding: '0.5rem 1rem',
+              cursor: 'pointer',
+              fontSize: '0.875rem',
+              fontWeight: '500'
+            }}
+          >
+            Clear Context
+          </button>
+        </div>
+      )}
 
       {/* Status Dashboard */}
       <div style={{ 

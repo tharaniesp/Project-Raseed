@@ -426,6 +426,11 @@ class VertexAIAgentService:
     
     async def process_query_with_ai(self, context_prompt: str) -> str:
         """Process query using available AI service"""
+        # Check if fallback mode is forced
+        if settings.FORCE_FALLBACK_MODE:
+            logger.info("🔄 Forced fallback mode enabled - skipping AI processing")
+            return "I'm currently in fallback mode. Please check your receipt data manually or try again later when AI services are available."
+        
         if self.use_generative_ai and GENERATIVE_AI_AVAILABLE:
             return await self.process_query_with_generative_ai(context_prompt)
         elif self.use_vertex_ai and VERTEX_AI_AVAILABLE:
@@ -433,6 +438,77 @@ class VertexAIAgentService:
         else:
             logger.warning("⚠️ No AI service available, returning fallback response")
             return "I apologize, but I'm currently unable to process your request due to AI service limitations. Please try again later."
+
+    def _get_simple_fallback_response(self, query: str, receipts_data: List[Dict]) -> str:
+        """Provide simple fallback responses based on receipt data without AI"""
+        query_lower = query.lower()
+        
+        # Basic receipt analysis
+        if any(word in query_lower for word in ['receipt', 'purchase', 'bought', 'spent']):
+            if receipts_data:
+                total_spent = sum(receipt.get('total', 0) for receipt in receipts_data)
+                receipt_count = len(receipts_data)
+                return f"""📊 **Receipt Summary**:
+• Total receipts: {receipt_count}
+• Total spent: ${total_spent:.2f}
+• Recent purchases available in your receipt history
+
+💡 **Tip**: Check the "My Receipts" section for detailed item breakdowns."""
+            else:
+                return "📊 No receipt data available. Try uploading some receipts first!"
+        
+        # Shopping list requests
+        elif any(word in query_lower for word in ['shopping', 'buy', 'list', 'items']):
+            if receipts_data:
+                # Extract common items from receipts
+                all_items = []
+                for receipt in receipts_data:
+                    items = receipt.get('items', [])
+                    all_items.extend([item.get('name', '') for item in items if item.get('name')])
+                
+                if all_items:
+                    unique_items = list(set(all_items))[:10]  # Top 10 unique items
+                    return f"""🛒 **Common Items from Your Receipts**:
+{chr(10).join([f"• {item}" for item in unique_items])}
+
+💡 **Tip**: Create a shopping list manually based on these items, or check individual receipts for specific details."""
+                else:
+                    return "🛒 No item details available in your receipts. Try processing receipts with AI when quota resets."
+            else:
+                return "🛒 No receipt data available. Upload some receipts to see shopping suggestions!"
+        
+        # Cooking suggestions
+        elif any(word in query_lower for word in ['cook', 'recipe', 'food', 'meal']):
+            return """👨‍🍳 **Cooking Suggestions**:
+• Check your receipt items for ingredients you have
+• Look up recipes online using those ingredients
+• Consider traditional Indian recipes based on your purchases
+
+💡 **Tip**: When AI quota resets, I can provide personalized cooking suggestions based on your ingredients!"""
+        
+        # Spending analysis
+        elif any(word in query_lower for word in ['spending', 'budget', 'money', 'cost']):
+            if receipts_data:
+                total_spent = sum(receipt.get('total', 0) for receipt in receipts_data)
+                return f"""💰 **Spending Overview**:
+• Total spent: ${total_spent:.2f}
+• Receipt count: {len(receipts_data)}
+
+💡 **Tip**: Check individual receipts for detailed spending breakdowns and merchant information."""
+            else:
+                return "💰 No spending data available. Upload receipts to track your expenses!"
+        
+        # Default response
+        else:
+            return """🤖 **AI Assistant Status**:
+I'm currently in fallback mode due to API quota limits. Here's what you can do:
+
+📊 **View Receipts**: Check your uploaded receipts for details
+🛒 **Manual Lists**: Create shopping lists manually
+📱 **Wallet Passes**: Generate passes for your receipts
+⏰ **Try Tomorrow**: AI features will be available again tomorrow
+
+💡 **Tip**: Try asking about "receipts", "shopping", "cooking", or "spending" for basic information!"""
 
     async def process_query_with_generative_ai(self, context_prompt: str) -> str:
         """Process query using Google Generative AI with enhanced Indian language support"""
@@ -481,8 +557,58 @@ Additional Guidelines for Indian Language Responses:
                 return "I couldn't generate a response. Please try rephrasing your question."
                 
         except Exception as e:
-            logger.error(f"❌ Google Generative AI error: {e}")
-            return f"I encountered an error processing your request: {str(e)}"
+            error_str = str(e)
+            logger.error(f"❌ Google Generative AI error: {error_str}")
+            
+            # Check for specific quota exceeded errors
+            if "429" in error_str and "quota" in error_str.lower():
+                logger.warning("⚠️ Gemini API quota exceeded - providing fallback response")
+                return self._get_quota_exceeded_fallback_response()
+            elif "quota" in error_str.lower() and "exceeded" in error_str.lower():
+                logger.warning("⚠️ API quota exceeded - providing fallback response")
+                return self._get_quota_exceeded_fallback_response()
+            elif "rate limit" in error_str.lower():
+                logger.warning("⚠️ Rate limit exceeded - providing fallback response")
+                return self._get_rate_limit_fallback_response()
+            else:
+                # For other errors, provide a generic but helpful response
+                return self._get_generic_error_fallback_response()
+
+    def _get_quota_exceeded_fallback_response(self) -> str:
+        """Provide helpful fallback response when API quota is exceeded"""
+        return """I apologize, but I've reached my daily limit for AI processing. Here are some helpful alternatives:
+
+📊 **Receipt Analysis**: You can still view your receipt details and extracted information in the "My Receipts" section.
+
+🛒 **Manual Shopping Lists**: Create shopping lists manually based on your receipt items.
+
+📱 **Wallet Passes**: Generate Google Wallet passes for your receipts even without AI processing.
+
+⏰ **Try Again Tomorrow**: The quota resets daily, so you can ask questions again tomorrow.
+
+💡 **Pro Tip**: For immediate assistance, try uploading a new receipt or checking your existing receipts for item details."""
+
+    def _get_rate_limit_fallback_response(self) -> str:
+        """Provide helpful fallback response when rate limit is exceeded"""
+        return """I'm currently experiencing high demand. Please try again in a few minutes, or:
+
+📊 **Browse Your Receipts**: Check your uploaded receipts for item details and amounts.
+
+🛒 **Manual Actions**: Create shopping lists or wallet passes manually.
+
+⏰ **Retry Later**: The system will be available again shortly."""
+
+    def _get_generic_error_fallback_response(self) -> str:
+        """Provide helpful fallback response for other errors"""
+        return """I'm experiencing some technical difficulties right now. Here's what you can do:
+
+📊 **View Receipts**: Check your uploaded receipts in the "My Receipts" section.
+
+🛒 **Manual Features**: Use the manual features like wallet pass generation.
+
+🔄 **Try Again**: The issue might be temporary - please try again in a few minutes.
+
+📞 **Contact Support**: If the problem persists, please contact support."""
 
     async def process_query_with_vertex_ai(self, context_prompt: str) -> str:
         """Process query using Vertex AI (fallback method)"""
@@ -601,6 +727,11 @@ Additional Guidelines for Indian Language Responses:
             
             # Process with available AI service
             ai_response = await self.process_query_with_ai(context_prompt)
+            
+            # Check if we got a quota exceeded response and use fallback
+            if "quota" in ai_response.lower() and "exceeded" in ai_response.lower():
+                logger.info("🔄 Using simple fallback response due to quota limits")
+                ai_response = self._get_simple_fallback_response(request.query, receipts_data)
             
             # Extract actionable items
             actionable_items = self.extract_actionable_items(ai_response, query_type)

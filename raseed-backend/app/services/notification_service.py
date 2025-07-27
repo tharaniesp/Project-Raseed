@@ -44,16 +44,18 @@ class WebSocketManager:
     def __init__(self):
         self.active_connections: Dict[str, Set[WebSocket]] = {}
         self.connection_users: Dict[WebSocket, str] = {}
+        self.connection_timestamps: Dict[WebSocket, float] = {}
     
     async def connect(self, websocket: WebSocket, user_id: str):
         """Connect a new WebSocket for a user"""
-        await websocket.accept()
+        # Note: websocket.accept() is now called in the route handler
         
         if user_id not in self.active_connections:
             self.active_connections[user_id] = set()
         
         self.active_connections[user_id].add(websocket)
         self.connection_users[websocket] = user_id
+        self.connection_timestamps[websocket] = asyncio.get_event_loop().time()
         
         logger.info(f"🔌 WebSocket connected for user {user_id}")
     
@@ -61,23 +63,31 @@ class WebSocketManager:
         """Disconnect a WebSocket"""
         user_id = self.connection_users.get(websocket)
         if user_id:
-            self.active_connections[user_id].discard(websocket)
-            if not self.active_connections[user_id]:
-                del self.active_connections[user_id]
-            del self.connection_users[websocket]
+            if user_id in self.active_connections:
+                self.active_connections[user_id].discard(websocket)
+                if not self.active_connections[user_id]:
+                    del self.active_connections[user_id]
+            
+            # Clean up tracking dictionaries
+            self.connection_users.pop(websocket, None)
+            self.connection_timestamps.pop(websocket, None)
+            
             logger.info(f"🔌 WebSocket disconnected for user {user_id}")
     
     async def send_personal_message(self, message: str, user_id: str):
-        """Send message to specific user"""
+        """Send message to specific user with improved error handling"""
         if user_id in self.active_connections:
             disconnected = set()
             for connection in self.active_connections[user_id]:
                 try:
                     await connection.send_text(message)
+                    # Update timestamp on successful send
+                    self.connection_timestamps[connection] = asyncio.get_event_loop().time()
                 except WebSocketDisconnect:
+                    logger.info(f"🔌 WebSocket disconnected during send for user {user_id}")
                     disconnected.add(connection)
                 except Exception as e:
-                    logger.error(f"❌ Error sending WebSocket message: {e}")
+                    logger.error(f"❌ Error sending WebSocket message to user {user_id}: {e}")
                     disconnected.add(connection)
             
             # Clean up disconnected connections
@@ -85,7 +95,7 @@ class WebSocketManager:
                 self.disconnect(connection)
     
     async def broadcast_to_all(self, message: str):
-        """Broadcast message to all connected users"""
+        """Broadcast message to all connected users with improved error handling"""
         all_connections = set()
         for connections in self.active_connections.values():
             all_connections.update(connections)
@@ -94,6 +104,8 @@ class WebSocketManager:
         for connection in all_connections:
             try:
                 await connection.send_text(message)
+                # Update timestamp on successful send
+                self.connection_timestamps[connection] = asyncio.get_event_loop().time()
             except WebSocketDisconnect:
                 disconnected.add(connection)
             except Exception as e:
@@ -103,6 +115,41 @@ class WebSocketManager:
         # Clean up disconnected connections
         for connection in disconnected:
             self.disconnect(connection)
+    
+    def get_connection_stats(self) -> Dict[str, Any]:
+        """Get statistics about active connections"""
+        total_connections = sum(len(connections) for connections in self.active_connections.values())
+        active_users = len(self.active_connections)
+        
+        # Calculate average connection age
+        current_time = asyncio.get_event_loop().time()
+        connection_ages = []
+        for websocket, timestamp in self.connection_timestamps.items():
+            age = current_time - timestamp
+            connection_ages.append(age)
+        
+        avg_age = sum(connection_ages) / len(connection_ages) if connection_ages else 0
+        
+        return {
+            "total_connections": total_connections,
+            "active_users": active_users,
+            "average_connection_age_seconds": avg_age,
+            "oldest_connection_seconds": max(connection_ages) if connection_ages else 0,
+            "newest_connection_seconds": min(connection_ages) if connection_ages else 0
+        }
+    
+    def cleanup_stale_connections(self):
+        """Clean up connections that haven't been active for too long"""
+        current_time = asyncio.get_event_loop().time()
+        stale_connections = []
+        
+        for websocket, timestamp in self.connection_timestamps.items():
+            if current_time - timestamp > 3600:  # 1 hour timeout
+                stale_connections.append(websocket)
+        
+        for websocket in stale_connections:
+            logger.info(f"🧹 Cleaning up stale WebSocket connection")
+            self.disconnect(websocket)
 
 
 # Global WebSocket manager instance

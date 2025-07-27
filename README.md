@@ -1,45 +1,53 @@
 # 🧾 Project Raseed - AI-Powered Receipt Management System
 
-An intelligent receipt management system that uses AI to extract data from receipt images and provides natural language querying capabilities.
+An intelligent receipt management system that uses AI to extract data from receipt images and provides natural language querying capabilities *with support for 10+ Indian languages* including Hindi (हिंदी), Tamil (தமிழ்), Kannada (ಕನ್ನಡ), and more!
 
+## 🌟 Key Features
+
+- 🤖 *AI-Powered Receipt Processing* using Google Gemini Vision
+- 🇮🇳 *Indian Language Support* - Ask questions in Hindi, Tamil, Kannada, Telugu, Malayalam, and more
+- 📱 *Google Wallet Integration* - Create digital passes from receipts and shopping lists
+- 🔍 *Natural Language Queries* - "मुझे कुकिंग के लिए क्या चाहिए?" or "What can I cook with chicken?"
+- 💳 *Digital Wallet Passes* - Add receipts and shopping lists to Google Wallet
+- 📊 *Spending Insights* - Analyze spending patterns in your preferred language
 
 ## 🎯 Project Overview
 
-**Project Raseed** is built incrementally across 5 steps:
+*Project Raseed* is built incrementally across 5 steps:
 
-- ✅ **Step 1**: Receipt Upload + Firebase Storage (COMPLETE)
-- ✅ **Step 2**: Gemini Vision AI Integration (COMPLETE)
-- ✅ **Step 3**: Google Wallet Pass Generation and Add to Google Wallet (COMPLETE)
-- 🔄 **Step 4**: Natural Language Query System
-- 🔄 **Step 5**: Insights & Push Notifications
+- ✅ *Step 1*: Receipt Upload + Firebase Storage (COMPLETE)
+- ✅ *Step 2*: Gemini Vision AI Integration (COMPLETE)
+- ✅ *Step 3*: Google Wallet Pass Generation and Add to Google Wallet (COMPLETE)
+- 🔄 *Step 4: Natural Language Query System **with Indian Language Support* 🇮🇳
+- 🔄 *Step 5*: Insights & Push Notifications
 
 ## 🏗️ Architecture
 
-```
+
 Frontend (React) ←→ Backend (FastAPI) ←→ Firebase (Storage + Firestore)
                                      ↓
                                Gemini AI APIs
-```
+
 
 ## 🚀 Quick Start
 
 ### Prerequisites
 
-- **Node.js** 18+ and npm
-- **Python** 3.8+ and pip
-- **Firebase Project** (see setup below)
-- **Google Cloud Project** with Gemini API access
+- *Node.js* 18+ and npm
+- *Python* 3.8+ and pip
+- *Firebase Project* (see setup below)
+- *Google Cloud Project* with Gemini API access
 
 ### 1. Clone Repository
 
-```bash
+bash
 git clone https://github.com/yourusername/project-raseed.git
 cd project-raseed
-```
+
 
 ### 2. Backend Setup
 
-```bash
+bash
 cd backend
 
 # Create virtual environment
@@ -60,13 +68,13 @@ cp .env.example .env
 
 # Run backend server
 python main.py
-```
 
-Backend will run on `http://localhost:8000`
+
+Backend will run on http://localhost:8000
 
 ### 3. Frontend Setup
 
-```bash
+bash
 cd frontend
 
 # Install dependencies
@@ -78,61 +86,61 @@ cp .env.example .env
 
 # Start development server
 npm start
-```
 
-Frontend will run on `http://localhost:3000`
+
+Frontend will run on http://localhost:3000
 
 ## 🔥 Firebase Setup Guide
 
 ### Step 1: Create Firebase Project
 
 1. Go to [Firebase Console](https://console.firebase.google.com/)
-2. Click **"Create a project"**
-3. Enter project name: `project-raseed` (or your preferred name)
+2. Click *"Create a project"*
+3. Enter project name: project-raseed (or your preferred name)
 4. Enable Google Analytics (optional)
-5. Click **"Create project"**
+5. Click *"Create project"*
 
 ### Step 2: Enable Required Services
 
 #### Enable Firestore Database
-1. In Firebase Console → **Firestore Database**
-2. Click **"Create database"**
-3. Choose **"Start in test mode"** (we'll secure it later)
+1. In Firebase Console → *Firestore Database*
+2. Click *"Create database"*
+3. Choose *"Start in test mode"* (we'll secure it later)
 4. Select your region (choose closest to your users)
-5. Click **"Done"**
+5. Click *"Done"*
 
 #### Enable Firebase Storage
-1. In Firebase Console → **Storage**
-2. Click **"Get started"**
-3. Review security rules → **"Next"**
-4. Choose storage location → **"Done"**
+1. In Firebase Console → *Storage*
+2. Click *"Get started"*
+3. Review security rules → *"Next"*
+4. Choose storage location → *"Done"*
 
 ### Step 3: Create Service Account
 
-1. Go to **Project Settings** (gear icon)
-2. Navigate to **"Service accounts"** tab
-3. Click **"Generate new private key"**
-4. Save the JSON file as `firebase-service-account.json`
-5. Place this file in your `backend/` directory
+1. Go to *Project Settings* (gear icon)
+2. Navigate to *"Service accounts"* tab
+3. Click *"Generate new private key"*
+4. Save the JSON file as firebase-service-account.json
+5. Place this file in your backend/ directory
 
 ### Step 4: Get Configuration Values
 
-From the downloaded JSON file, extract these values for your `.env`:
+From the downloaded JSON file, extract these values for your .env:
 
-```bash
+bash
 FIREBASE_PROJECT_ID=your-project-id
 FIREBASE_PRIVATE_KEY="-----BEGIN PRIVATE KEY-----\n...\n-----END PRIVATE KEY-----\n"
 FIREBASE_CLIENT_EMAIL=firebase-adminsdk-xxxxx@your-project.iam.gserviceaccount.com
 FIREBASE_STORAGE_BUCKET=your-project-id.appspot.com
-```
+
 
 ### Step 5: Set Security Rules (Development)
 
 #### Firestore Rules
-1. Go to **Firestore Database** → **Rules**
+1. Go to *Firestore Database* → *Rules*
 2. Replace with:
 
-```javascript
+javascript
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -142,13 +150,13 @@ service cloud.firestore {
     }
   }
 }
-```
+
 
 #### Storage Rules
-1. Go to **Storage** → **Rules**
+1. Go to *Storage* → *Rules*
 2. Replace with:
 
-```javascript
+javascript
 rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
@@ -158,9 +166,9 @@ service firebase.storage {
     }
   }
 }
-```
 
-**⚠️ Production Note**: These rules are for development only. See [Production Security](#production-security) section for secure rules.
+
+*⚠️ Production Note*: These rules are for development only. See [Production Security](#production-security) section for secure rules.
 
 ## 🤖 Gemini AI Setup Guide
 
@@ -172,23 +180,53 @@ service firebase.storage {
 
 ### Step 2: Add to Environment
 
-Add to your `backend/.env`:
+Add to your backend/.env:
 
-```bash
+bash
 GEMINI_API_KEY=your-gemini-api-key-here
-```
+
 
 ### Step 3: Enable Additional APIs (for Steps 3-4)
 
 1. Go to [Google Cloud Console](https://console.cloud.google.com/)
 2. Enable these APIs:
-   - **Vertex AI API** (for advanced AI features)
-   - **Google Wallet API** (for digital passes)
-   - **Cloud Translation API** (for multi-language support)
+   - *Vertex AI API* (for advanced AI features)
+   - *Google Wallet API* (for digital passes)
+   - *Cloud Translation API* (for multi-language support)
+
+## 🇮🇳 Indian Language Support
+
+Project Raseed now supports *10+ Indian languages* powered by Google Gemini AI! Users can interact with their personal shopping assistant in their native language.
+
+### Supported Languages
+- *हिंदी (Hindi)* - hi
+- *தமிழ் (Tamil)* - ta 
+- *ಕನ್ನಡ (Kannada)* - kn
+- *తెలుగు (Telugu)* - te
+- *മലയാളം (Malayalam)* - ml
+- *ગુજરાતી (Gujarati)* - gu
+- *मराठी (Marathi)* - mr
+- *বাংলা (Bengali)* - bn
+- *ਪੰਜਾਬੀ (Punjabi)* - pa
+- *ଓଡ଼ିଆ (Odia)* - or
+
+### Example Queries
+
+*Hindi*: चिकन और चावल से मैं क्या बना सकता हूँ?  
+*Tamil*: கோழி மற்றும் அரிசியுடன் என்ன சமைக்க முடியும்?  
+*Kannada*: ಕೋಳಿ ಮತ್ತು ಅಕ್ಕಿಯೊಂದಿಗೆ ನಾನು ಏನು ಬೇಯಿಸಬಹುದು?
+
+### Features
+- 🤖 *Native Language Understanding* - Ask in your preferred language
+- 🍛 *Cultural Context* - Indian cooking methods and ingredients
+- 🛒 *Smart Shopping* - Organized by Indian grocery categories
+- 💰 *Local Currency* - Spending analysis in Indian Rupees (₹)
+
+📖 *[Read full documentation →](INDIAN_LANGUAGE_SUPPORT.md)*
 
 ## 📁 Project Structure
 
-```
+
 project-raseed/
 ├── backend/
 │   ├── app/
@@ -221,13 +259,13 @@ project-raseed/
 │   ├── package.json
 │   └── .env
 └── README.md
-```
+
 
 ## 🔐 Environment Configuration
 
-### Backend `.env` File
+### Backend .env File
 
-```bash
+bash
 # Project Configuration
 PROJECT_NAME="Project Raseed API"
 DEBUG=true
@@ -246,42 +284,42 @@ GEMINI_API_KEY=your-gemini-api-key
 # For Future Steps
 OPENAI_API_KEY=your-openai-key (optional)
 GOOGLE_WALLET_ISSUER_ID=your-wallet-issuer-id (Step 3)
-```
 
-### Frontend `.env` File
 
-```bash
+### Frontend .env File
+
+bash
 REACT_APP_API_URL=http://localhost:8000
 REACT_APP_ENVIRONMENT=development
-```
+
 
 ## 🧪 Testing Your Setup
 
 ### 1. Test Backend Health
 
-```bash
+bash
 curl http://localhost:8000/health
-```
+
 
 Expected response:
-```json
+json
 {
   "status": "healthy",
   "firebase_initialized": true,
   "timestamp": "2025-07-18T10:30:00Z"
 }
-```
+
 
 ### 2. Test File Upload
 
-```bash
+bash
 curl -X POST http://localhost:8000/api/upload-receipt \
   -F "file=@test-receipt.jpg"
-```
+
 
 ### 3. Test Frontend
 
-1. Open `http://localhost:3000`
+1. Open http://localhost:3000
 2. Navigate to Upload page
 3. Upload a receipt image
 4. Check it appears in Receipts page
@@ -291,7 +329,7 @@ curl -X POST http://localhost:8000/api/upload-receipt \
 
 ### Firestore Security Rules (Production)
 
-```javascript
+javascript
 rules_version = '2';
 service cloud.firestore {
   match /databases/{database}/documents {
@@ -310,11 +348,11 @@ service cloud.firestore {
     }
   }
 }
-```
+
 
 ### Storage Security Rules (Production)
 
-```javascript
+javascript
 rules_version = '2';
 service firebase.storage {
   match /b/{bucket}/o {
@@ -328,14 +366,14 @@ service firebase.storage {
     }
   }
 }
-```
+
 
 ## 🚢 Deployment
 
 ### Backend Deployment Options
 
 #### Option 1: Railway
-```bash
+bash
 # Install Railway CLI
 npm install -g @railway/cli
 
@@ -343,21 +381,21 @@ npm install -g @railway/cli
 railway login
 railway init
 railway up
-```
+
 
 #### Option 2: Google Cloud Run
-```bash
+bash
 # Build and deploy
 gcloud run deploy project-raseed-api \
   --source . \
   --platform managed \
   --region us-central1
-```
+
 
 ### Frontend Deployment
 
 #### Firebase Hosting
-```bash
+bash
 # Install Firebase CLI
 npm install -g firebase-tools
 
@@ -368,7 +406,7 @@ firebase init hosting
 # Build and deploy
 npm run build
 firebase deploy
-```
+
 
 ## 🎯 Development Roadmap
 
@@ -406,33 +444,33 @@ firebase deploy
 ## 🤝 Contributing
 
 1. Fork the repository
-2. Create a feature branch: `git checkout -b feature/amazing-feature`
-3. Commit changes: `git commit -m 'Add amazing feature'`
-4. Push to branch: `git push origin feature/amazing-feature`
+2. Create a feature branch: git checkout -b feature/amazing-feature
+3. Commit changes: git commit -m 'Add amazing feature'
+4. Push to branch: git push origin feature/amazing-feature
 5. Open a Pull Request
 
 ## 📝 API Documentation
 
 Once running, visit:
-- **Swagger UI**: `http://localhost:8000/docs`
-- **ReDoc**: `http://localhost:8000/redoc`
+- *Swagger UI*: http://localhost:8000/docs
+- *ReDoc*: http://localhost:8000/redoc
 
 ## 🐛 Troubleshooting
 
 ### Common Issues
 
 #### "Firebase not initialized"
-- Check your `firebase-service-account.json` file is in `backend/` directory
+- Check your firebase-service-account.json file is in backend/ directory
 - Verify all Firebase environment variables are set
 - Ensure Firebase project has Firestore and Storage enabled
 
 #### "CORS errors"
-- Check `ALLOWED_ORIGINS` in `backend/app/core/config.py`
+- Check ALLOWED_ORIGINS in backend/app/core/config.py
 - Verify frontend URL is included in CORS settings
 
 #### "Module not found" errors
-- Run `pip install -r requirements.txt` in backend
-- Run `npm install` in frontend
+- Run pip install -r requirements.txt in backend
+- Run npm install in frontend
 - Check Python virtual environment is activated
 
 #### Upload fails silently
@@ -443,10 +481,10 @@ Once running, visit:
 ### Debug Mode
 
 Enable debug logging in backend:
-```bash
+bash
 export DEBUG=true
 python main.py
-```
+
 
 ## 📄 License
 
@@ -462,6 +500,6 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ---
 
-**📧 Questions?** Open an issue or reach out to the development team.
+*📧 Questions?* Open an issue or reach out to the development team.
 
-**🌟 Like this project?** Give it a star on GitHub!
+*🌟 Like this project?* Give it a star on GitHub!

@@ -100,6 +100,42 @@ async def generate_insights(
             detail=f"Failed to generate insights: {str(e)}"
         )
 
+@insights_router.get("/insights/trends/{user_id}")
+async def get_spending_trends(
+    user_id: str = Path(..., description="User ID to get trends for"),
+    period: str = Query("30d", description="Time period: 7d, 30d, or 90d"),
+    categories: Optional[str] = Query(None, description="Comma-separated list of categories to filter")
+):
+    """
+    Get spending trends and time series data for charts
+    
+    Returns:
+    - Daily spending patterns
+    - Category breakdowns
+    - Trend analysis
+    - Growth rates and insights
+    """
+    try:
+        trends_data = await insights_service.get_spending_trends(
+            user_id=user_id, 
+            period=period,
+            categories=categories.split(",") if categories else None
+        )
+        
+        return {
+            "success": True,
+            "trends": trends_data,
+            "period": period,
+            "generated_at": datetime.now().isoformat()
+        }
+        
+    except Exception as e:
+        logger.error(f"❌ Error getting trends for user {user_id}: {e}")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to get spending trends: {str(e)}"
+        )
+
 # ================================
 # WALLET PASS ENDPOINTS
 # ================================

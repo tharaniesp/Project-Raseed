@@ -167,3 +167,9 @@ message_transaction.py
 # package-lock.json
 # yarn.lock
 raseed-backend/app/services/__pycache__
+
+
+raseed-backend/project
+raseed-backend/app/core/__pycache__
+raseed-backend/app/core/models/__pycache__
+raseed-backend/app/core/services/__pycache__

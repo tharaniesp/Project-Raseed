@@ -34,7 +34,7 @@ class Settings(BaseSettings):
     ]
     
     # AI/ML Configuration (Step 2)
-    GEMINI_API_KEY: str = ""
+    GEMINI_API_KEY: str = "AIzaSyDc07PX6qoo0XpEfOE1UERcnsF0lOXL8Mk"
     OPENAI_API_KEY: str = ""
     
     # AI Processing Settings
@@ -57,7 +57,7 @@ class Settings(BaseSettings):
     MAX_QUERY_CACHE_SIZE: int = 100
     
     # Google Wallet Configuration (Step 3)
-    GOOGLE_WALLET_ISSUER_ID: str = ""
+    GOOGLE_WALLET_ISSUER_ID: str = "3388000000022971806"
     AUTO_GENERATE_WALLET_PASS: bool = True 
     
     # Document AI Configuration (Enhanced Receipt Processing)

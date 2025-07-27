@@ -7,6 +7,7 @@ import {
 } from 'lucide-react';
 import InsightsList from '../components/Insights/InsightsList';
 import NotificationsCenter from '../components/Insights/NotificationsCenter';
+import TrendsChart from '../components/Insights/TrendsChart';
 import { insightsService } from '../services/insightsService';
 
 const InsightsPage = () => {
@@ -14,7 +15,8 @@ const InsightsPage = () => {
     insights: [],
     notifications: [],
     spending_trends: null,
-    wallet_passes: []
+    wallet_passes: [],
+    trends_data: null
   });
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -45,12 +47,17 @@ const InsightsPage = () => {
       const walletPasses = await insightsService.getWalletPasses();
       console.log('💳 Wallet passes loaded:', walletPasses);
       
+      // Load trends data
+      const trendsData = await insightsService.getTrendsData();
+      console.log('📈 Trends data loaded:', trendsData);
+      
       // Set the data with proper structure
       setData({
         insights: insights?.insights || insights || [],
         notifications: notifications?.notifications || notifications || [],
         spending_trends: null, // Will be loaded separately if needed
-        wallet_passes: walletPasses?.wallet_passes || walletPasses || []
+        wallet_passes: walletPasses?.wallet_passes || walletPasses || [],
+        trends_data: trendsData
       });
       
     } catch (error) {
@@ -62,7 +69,8 @@ const InsightsPage = () => {
         insights: [],
         notifications: [],
         spending_trends: null,
-        wallet_passes: []
+        wallet_passes: [],
+        trends_data: null
       });
     } finally {
       setLoading(false);
@@ -364,12 +372,12 @@ const InsightsPage = () => {
         
         {activeTab === 'trends' && (
           <div className="trends-content">
-            <div className="coming-soon">
-              <PieChart className="coming-soon-icon" />
-              <h3>Spending Trends</h3>
-              <p>Advanced analytics and trend visualization coming soon!</p>
-              <p className="hint">Upload more receipts to see detailed spending patterns.</p>
-            </div>
+            <TrendsChart 
+              insights={data.insights}
+              trendsData={data.trends_data}
+              loading={loading}
+              onRefresh={handleRefresh}
+            />
           </div>
         )}
         

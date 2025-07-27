@@ -1232,16 +1232,20 @@ class InsightsService:
     # ANALYTICS AND TRENDS
     # ================================
     
-    async def get_spending_trends(self, user_id: str, period: str = "month", category: Optional[str] = None) -> Dict:
+    async def get_spending_trends(self, user_id: str, period: str = "30d", categories: Optional[List[str]] = None) -> Dict:
         """Get spending trends and analytics"""
         try:
             self.logger.info(f"📊 Getting spending trends for user: {user_id}, period: {period}")
+            
+            # Convert period format (7d, 30d, 90d) to days
+            days = int(period.replace('d', '')) if period.endswith('d') else 30
             
             # Mock comprehensive trends data
             all_trends = {
                 "user_id": user_id,
                 "period": period,
-                "category_filter": category,
+                "days": days,
+                "category_filter": categories,
                 "summary": {
                     "total_current_period": 8500.00,
                     "total_previous_period": 8350.00,
@@ -1249,6 +1253,7 @@ class InsightsService:
                     "total_change_percentage": 1.8,
                     "trend_direction": "increasing"
                 },
+                "daily_spending": self._generate_daily_spending_data(days),
                 "categories": [
                     {
                         "category": "groceries",
@@ -1341,11 +1346,11 @@ class InsightsService:
                 "period_end": datetime.now().isoformat()
             }
             
-            # Filter by category if specified
-            if category:
+            # Filter by categories if specified
+            if categories:
                 all_trends["categories"] = [
                     cat for cat in all_trends["categories"] 
-                    if cat["category"].lower() == category.lower()
+                    if cat["category"].lower() in [c.lower() for c in categories]
                 ]
             
             return all_trends
@@ -1353,6 +1358,49 @@ class InsightsService:
         except Exception as e:
             self.logger.error(f"❌ Error getting spending trends: {e}")
             return {"error": str(e)}
+            
+    def _generate_daily_spending_data(self, days: int) -> List[Dict]:
+        """Generate mock daily spending data for trends visualization"""
+        import random
+        from datetime import datetime, timedelta
+        
+        daily_data = []
+        categories = ["groceries", "dining", "transportation", "entertainment", "shopping", "utilities"]
+        
+        for i in range(days):
+            date = datetime.now() - timedelta(days=days - 1 - i)
+            date_str = date.strftime("%Y-%m-%d")
+            
+            # Generate realistic spending patterns
+            day_total = 0
+            category_amounts = {}
+            
+            for category in categories:
+                # Base amounts with some randomness
+                base_amounts = {
+                    "groceries": random.randint(80, 200),
+                    "dining": random.randint(30, 120),
+                    "transportation": random.randint(20, 80),
+                    "entertainment": random.randint(0, 100),
+                    "shopping": random.randint(0, 150),
+                    "utilities": random.randint(10, 50)
+                }
+                
+                # Some days have no spending in certain categories
+                if random.random() > 0.6:  # 60% chance of spending in each category
+                    amount = base_amounts.get(category, 0)
+                    category_amounts[category] = amount
+                    day_total += amount
+                else:
+                    category_amounts[category] = 0
+            
+            daily_data.append({
+                "date": date_str,
+                "total": day_total,
+                "categories": category_amounts
+            })
+        
+        return daily_data
     
     # ================================
     # UTILITY AND HEALTH CHECK METHODS

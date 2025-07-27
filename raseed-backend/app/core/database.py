@@ -54,7 +54,7 @@ def initialize_firebase() -> bool:
             cred = credentials.Certificate(cred_dict)
 
             # 🔧 FIX: Use .env-provided bucket if available
-            storage_bucket = settings.FIREBASE_STORAGE_BUCKET or f"{settings.FIREBASE_PROJECT_ID}.appspot.com"
+            storage_bucket = settings.FIREBASE_STORAGE_BUCKET or f"{settings.FIREBASE_PROJECT_ID}.firebasestorage.app"
 
             firebase_admin.initialize_app(cred, {
                 'storageBucket': storage_bucket

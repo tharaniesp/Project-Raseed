@@ -91,6 +91,108 @@ class InsightsService {
   }
 
   /**
+   * Get spending trends data for charts
+   */
+  async getTrendsData(userId = 'current_user', timeRange = '30d') {
+    try {
+      console.log('📊 Fetching trends data for user:', userId, 'timeRange:', timeRange);
+      const response = await this.api.get(`/api/insights/trends/${userId}?period=${timeRange}`);
+      
+      console.log('✅ Trends data response:', response);
+      
+      if (response.data) {
+        return response.data;
+      } else if (response.trends) {
+        return response.trends;
+      } else {
+        return response;
+      }
+      
+    } catch (error) {
+      console.error('❌ Error fetching trends data:', error);
+      
+      // Return mock trends data for development
+      return this._getMockTrendsData(timeRange);
+    }
+  }
+
+  /**
+   * Generate mock trends data for development
+   */
+  _getMockTrendsData(timeRange = '30d') {
+    const days = timeRange === '7d' ? 7 : timeRange === '30d' ? 30 : 90;
+    const categories = ['groceries', 'dining', 'transportation', 'entertainment', 'shopping', 'utilities'];
+    
+    const trendsData = {
+      period: timeRange,
+      total_spending: 0,
+      trends: [],
+      daily_spending: [],
+      category_breakdown: {}
+    };
+
+    // Generate daily spending data
+    for (let i = days - 1; i >= 0; i--) {
+      const date = new Date();
+      date.setDate(date.getDate() - i);
+      const dateStr = date.toISOString().split('T')[0];
+      
+      const dailyData = {
+        date: dateStr,
+        total: 0,
+        categories: {}
+      };
+
+      categories.forEach(category => {
+        const baseAmount = {
+          groceries: 150,
+          dining: 80,
+          transportation: 50,
+          entertainment: 40,
+          shopping: 60,
+          utilities: 30
+        }[category] || 30;
+        
+        const variance = Math.random() * 0.8 + 0.6; // 0.6 to 1.4 multiplier
+        const amount = Math.round(baseAmount * variance);
+        
+        dailyData.categories[category] = amount;
+        dailyData.total += amount;
+        
+        if (!trendsData.category_breakdown[category]) {
+          trendsData.category_breakdown[category] = 0;
+        }
+        trendsData.category_breakdown[category] += amount;
+      });
+
+      trendsData.daily_spending.push(dailyData);
+      trendsData.total_spending += dailyData.total;
+    }
+
+    // Generate trend insights
+    categories.forEach(category => {
+      const categoryTotal = trendsData.category_breakdown[category];
+      const avgDaily = categoryTotal / days;
+      const trendDirection = Math.random() > 0.5 ? 'increasing' : 'decreasing';
+      const changePercent = Math.random() * 20 + 5; // 5-25% change
+
+      trendsData.trends.push({
+        category,
+        trend_direction: trendDirection,
+        change_percentage: trendDirection === 'increasing' ? changePercent : -changePercent,
+        average_daily: avgDaily,
+        total_amount: categoryTotal,
+        insights: [
+          `${category} spending is ${trendDirection} by ${changePercent.toFixed(1)}%`,
+          `Average daily spending: ₹${avgDaily.toFixed(0)}`
+        ]
+      });
+    });
+
+    return trendsData;
+  }
+
+  /**
    * Get all wallet passes for user
    */
   async getWalletPasses(userId = 'current_user') {

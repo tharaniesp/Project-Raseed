@@ -1,5 +1,5 @@
 // src/pages/ReceiptsPage.js
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { Search, Filter, Calendar, DollarSign } from 'lucide-react';
 import { useReceipt } from '../context/ReceiptContext';
 import ReceiptCard from '../components/Receipt/ReceiptCard';
@@ -8,28 +8,30 @@ const ReceiptsPage = () => {
   const receiptContext = useReceipt();
   const [searchTerm, setSearchTerm] = useState('');
   const [sortBy, setSortBy] = useState('date');
+  const hasLoadedRef = useRef(false);
 
   useEffect(() => {
     console.log('🔍 ReceiptsPage: Loading receipts...');
-    if (receiptContext?.actions) {
+    if (receiptContext?.actions && !hasLoadedRef.current) {
       try {
+        hasLoadedRef.current = true;
         receiptContext.actions.loadReceipts();
       } catch (err) {
         console.error('❌ Error in ReceiptsPage useEffect:', err);
+        hasLoadedRef.current = false; // Reset on error
       }
     }
-  }, [receiptContext]);
+  }, []); // Empty dependency array - only run once on mount
 
-  // Add debug logging
+  // Add debug logging - only log when receipts change
   useEffect(() => {
     console.log('📊 ReceiptsPage Debug:', {
       receiptsCount: receiptContext?.receipts?.length || 0,
       loading: receiptContext?.loading,
       error: receiptContext?.error,
-      receipts: receiptContext?.receipts,
       receiptContext: !!receiptContext
     });
-  }, [receiptContext]);
+  }, [receiptContext?.receipts?.length, receiptContext?.loading, receiptContext?.error]);
   
   // Add fallback for when context is not available
   if (!receiptContext) {

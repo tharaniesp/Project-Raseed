@@ -1,5 +1,5 @@
 // src/context/ReceiptContext.js
-import React, { createContext, useContext, useReducer, useEffect } from 'react';
+import React, { createContext, useContext, useReducer, useEffect, useMemo } from 'react';
 import { receiptService } from '../services/receiptService';
 
 // Initial state
@@ -232,18 +232,20 @@ export function ReceiptProvider({ children }) {
     });
   }, [state]);
 
+  const actions = useMemo(() => ({
+    loadReceipts,
+    addReceipt,
+    updateReceipt,
+    setCurrentReceipt,
+    clearError,
+    checkBackendStatus,
+    markReceiptAdded: (receiptId) => dispatch({ type: ACTIONS.MARK_RECEIPT_ADDED, payload: receiptId }),
+    clearNewlyAdded: () => dispatch({ type: ACTIONS.CLEAR_NEWLY_ADDED })
+  }), []);
+
   const value = {
     ...state,
-    actions: {
-      loadReceipts,
-      addReceipt,
-      updateReceipt,
-      setCurrentReceipt,
-      clearError,
-      checkBackendStatus,
-      markReceiptAdded: (receiptId) => dispatch({ type: ACTIONS.MARK_RECEIPT_ADDED, payload: receiptId }),
-      clearNewlyAdded: () => dispatch({ type: ACTIONS.CLEAR_NEWLY_ADDED })
-    }
+    actions
   };
 
   return (

@@ -1093,7 +1093,7 @@ class InsightsService:
                 "user_id": user_id,
                 "title": "Grocery Spending Alert",
                 "description": "23% increase in grocery spending this month",
-                "pass_url": "https://wallet.google.com/pass/grocery-alert",
+                "save_url": "https://wallet.google.com/pass/grocery-alert",
                 "category": "groceries",
                 "amount_impact": 700.0,
                 "priority": "high",
@@ -1108,7 +1108,7 @@ class InsightsService:
                 "user_id": user_id,
                 "title": "Coffee Savings Opportunity",
                 "description": "Save ₹480/month by brewing at home",
-                "pass_url": "https://wallet.google.com/pass/coffee-savings",
+                "save_url": "https://wallet.google.com/pass/coffee-savings",
                 "category": "dining",
                 "amount_impact": 480.0,
                 "priority": "medium",
@@ -1142,16 +1142,24 @@ class InsightsService:
                     if insight_dict.get("insight_id") == insight_id:
                         return insight_dict
             
-            # If not found, return a mock insight
+            # If not found, return a mock insight with all required fields
             return {
                 "insight_id": insight_id,
                 "user_id": "current_user",
+                "insight_type": "savings_opportunity",
                 "title": "Sample Insight",
                 "description": "This is a sample insight for wallet pass generation",
                 "priority": "medium",
                 "category": "general",
+                "merchant": None,
+                "time_period": "this_month",
                 "amount_impact": 100.0,
-                "actionable_suggestions": ["Review your spending patterns"]
+                "percentage_change": 5.0,
+                "actionable_suggestions": ["Review your spending patterns", "Consider setting a budget", "Track your expenses regularly"],
+                "supporting_data": {},
+                "created_at": datetime.now().isoformat(),
+                "expires_at": (datetime.now() + timedelta(days=30)).isoformat(),
+                "wallet_pass_eligible": True
             }
             
         except Exception as e:

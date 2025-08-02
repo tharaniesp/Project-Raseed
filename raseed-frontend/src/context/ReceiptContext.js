@@ -213,8 +213,12 @@ export function ReceiptProvider({ children }) {
   // Check backend status on mount
   useEffect(() => {
     console.log('🚀 ReceiptProvider initializing...');
-    checkBackendStatus();
-    loadReceipts();
+    try {
+      checkBackendStatus();
+      loadReceipts();
+    } catch (err) {
+      console.error('❌ Error in ReceiptProvider initialization:', err);
+    }
   }, []);
 
   // Debug state changes

@@ -415,7 +415,7 @@ const InsightsPage = () => {
                         Created: {new Date(pass.created_at).toLocaleDateString()}
                       </span>
                       <button 
-                        onClick={() => window.open(pass.pass_url, '_blank')}
+                        onClick={() => window.open(pass.save_url, '_blank')}
                         className="btn btn-sm btn-primary"
                       >
                         Open in Wallet

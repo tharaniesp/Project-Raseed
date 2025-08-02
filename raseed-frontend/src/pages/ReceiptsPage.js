@@ -5,26 +5,52 @@ import { useReceipt } from '../context/ReceiptContext';
 import ReceiptCard from '../components/Receipt/ReceiptCard';
 
 const ReceiptsPage = () => {
-  const { receipts, loading, error, actions, newlyAddedReceipts } = useReceipt();
+  const receiptContext = useReceipt();
   const [searchTerm, setSearchTerm] = useState('');
   const [sortBy, setSortBy] = useState('date');
 
   useEffect(() => {
     console.log('🔍 ReceiptsPage: Loading receipts...');
-    actions.loadReceipts();
-  }, []);
+    if (receiptContext?.actions) {
+      try {
+        receiptContext.actions.loadReceipts();
+      } catch (err) {
+        console.error('❌ Error in ReceiptsPage useEffect:', err);
+      }
+    }
+  }, [receiptContext]);
 
   // Add debug logging
   useEffect(() => {
     console.log('📊 ReceiptsPage Debug:', {
-      receiptsCount: receipts.length,
-      loading,
-      error,
-      receipts: receipts
+      receiptsCount: receiptContext?.receipts?.length || 0,
+      loading: receiptContext?.loading,
+      error: receiptContext?.error,
+      receipts: receiptContext?.receipts,
+      receiptContext: !!receiptContext
     });
-  }, [receipts, loading, error]);
+  }, [receiptContext]);
+  
+  // Add fallback for when context is not available
+  if (!receiptContext) {
+    console.error('❌ ReceiptContext not available');
+    return (
+      <div className="page">
+        <div className="error-message">
+          <p>Receipt context not available. Please refresh the page.</p>
+          <button onClick={() => window.location.reload()} className="btn btn-primary">
+            Refresh Page
+          </button>
+        </div>
+      </div>
+    );
+  }
+  
+  const { receipts, loading, error, actions, newlyAddedReceipts } = receiptContext;
 
-  const filteredReceipts = receipts.filter(receipt => {
+  const filteredReceipts = (receipts || []).filter(receipt => {
+    if (!receipt) return false;
+    
     const filename = receipt.file_metadata?.original_filename || receipt.file_metadata?.filename || '';
     const merchantName = receipt.extracted_data?.merchant_name || '';
     
@@ -51,12 +77,27 @@ const ReceiptsPage = () => {
 
   console.log('🎯 Filtered and sorted receipts:', sortedReceipts);
 
-  if (loading) {
+  // Add error boundary for rendering
+  try {
+    if (loading) {
+      return (
+        <div className="page">
+          <div className="loading">
+            <div className="spinner"></div>
+            <span>Loading receipts...</span>
+          </div>
+        </div>
+      );
+    }
+  } catch (err) {
+    console.error('❌ Error in ReceiptsPage render:', err);
     return (
       <div className="page">
-        <div className="loading">
-          <div className="spinner"></div>
-          <span>Loading receipts...</span>
+        <div className="error-message">
+          <p>Error rendering receipts page: {err.message}</p>
+          <button onClick={() => window.location.reload()} className="btn btn-primary">
+            Reload Page
+          </button>
         </div>
       </div>
     );
@@ -72,14 +113,14 @@ const ReceiptsPage = () => {
       </div>
 
       {/* Debug Info */}
-      <div className="debug-info">
+      {/* <div className="debug-info">
         <strong>Debug Info:</strong> 
         Loading: {loading.toString()}, 
         Error: {error || 'none'}, 
         Receipts Count: {receipts.length}, 
         Filtered Count: {filteredReceipts.length},
         Newly Added: {Array.from(newlyAddedReceipts).length}
-      </div>
+      </div> */}
 
       {/* Search and Filter */}
       <div className="receipts-controls">
@@ -135,9 +176,18 @@ const ReceiptsPage = () => {
         <div className="receipts-grid">
           {sortedReceipts.map((receipt) => {
             console.log('🎫 Rendering receipt:', receipt);
-            return (
-              <ReceiptCard key={receipt.id} receipt={receipt} />
-            );
+            try {
+              return (
+                <ReceiptCard key={receipt.id} receipt={receipt} />
+              );
+            } catch (err) {
+              console.error('❌ Error rendering receipt card:', err, receipt);
+              return (
+                <div key={receipt.id} className="receipt-card error">
+                  <p>Error rendering receipt: {err.message}</p>
+                </div>
+              );
+            }
           })}
         </div>
       )}

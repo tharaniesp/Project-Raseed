@@ -48,7 +48,7 @@ class Settings(BaseSettings):
     
     # AI Fallback Configuration
     ENABLE_AI_FALLBACK_MODE: bool = True  # Enable fallback responses when AI quota exceeded
-    FORCE_FALLBACK_MODE: bool = False  # Force fallback mode (for testing or quota issues) - CHANGED TO FALSE
+    FORCE_FALLBACK_MODE: bool = False  # Force fallback mode (for testing or quota issues) - DISABLED
     
     # Vertex AI Configuration (Fallback - currently not working for this project)
     VERTEX_AI_LOCATION: str = "us-central1"
@@ -73,16 +73,12 @@ class Settings(BaseSettings):
     # Google Cloud Configuration
     GOOGLE_CLOUD_PROJECT: str = ""
     GOOGLE_APPLICATION_CREDENTIALS: str = ""
+    GOOGLE_CLOUD_QUOTA_PROJECT_ID: str = ""
     
-    # Document AI Configuration (Enhanced Receipt Processing)
-    DOCUMENT_AI_LOCATION: str = "us"
-    DOCUMENT_AI_RECEIPT_PROCESSOR_ID: str = ""
-    DOCUMENT_AI_INVOICE_PROCESSOR_ID: str = ""
-    DOCUMENT_AI_FORM_PROCESSOR_ID: str = ""
-    
-    # Google Cloud Configuration
-    GOOGLE_CLOUD_PROJECT: str = ""
-    GOOGLE_APPLICATION_CREDENTIALS: str = ""
+    # Gmail OAuth Configuration
+    GOOGLE_CLIENT_ID: str = ""
+    GOOGLE_CLIENT_SECRET: str = ""
+    GOOGLE_REDIRECT_URI: str = ""
     
     # Database
     FIRESTORE_COLLECTION_RECEIPTS: str = "receipts"

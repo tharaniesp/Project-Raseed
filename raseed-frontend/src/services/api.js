@@ -1,5 +1,9 @@
 // src/services/api.js
-const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
+const API_BASE_URL = process.env.REACT_APP_API_URL || 'http://localhost:8080';
+
+console.log('🔧 API Configuration:');
+console.log('- REACT_APP_API_URL:', process.env.REACT_APP_API_URL);
+console.log('- API_BASE_URL:', API_BASE_URL);
 
 class ApiService {
   constructor() {
@@ -8,6 +12,13 @@ class ApiService {
 
   async request(endpoint, options = {}) {
     const url = `${this.baseURL}${endpoint}`;
+    
+    console.log('🌐 API Request:', {
+      endpoint,
+      url,
+      baseURL: this.baseURL,
+      method: options.method || 'GET'
+    });
     
     const config = {
       headers: {

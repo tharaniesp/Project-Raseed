@@ -98,11 +98,23 @@ class VertexAIAgentService:
             logger.warning("⚠️ langdetect not available, defaulting to 'en'")
             return 'en'
             
+        # Handle very short English queries that might be misdetected
+        text_lower = text.lower().strip()
+        common_english_greetings = ['hey', 'hi', 'hello', 'good morning', 'good afternoon', 'good evening', 'how are you', 'what\'s up', 'sup']
+        if text_lower in common_english_greetings:
+            logger.info("🌐 Detected common English greeting, defaulting to English")
+            return 'en'
+            
         try:
             detected = detect(text)
             logger.info(f"🌐 Detected language: {detected}")
             
+            # If langdetect already detected English, trust it and don't override
+            if detected == 'en':
+                return 'en'
+            
             # Map some common Indian languages that langdetect might not catch properly
+            # Only check for Indian languages if langdetect didn't detect English
             indian_language_keywords = {
                 'hi': ['हिंदी', 'मैं', 'क्या', 'कैसे', 'कहाँ', 'कौन', 'कब', 'में', 'से', 'पर', 'को', 'का', 'की', 'के'],
                 'ta': ['தமிழ்', 'என்', 'எது', 'எப்படி', 'எங்கே', 'யார்', 'எப்போது', 'இல்', 'இருந்து', 'மேல்', 'க்கு', 'ன்', 'ள்', 'ம்'],
@@ -424,7 +436,7 @@ class VertexAIAgentService:
             - Reference traditional cooking and shopping wisdom
             """
     
-    async def process_query_with_ai(self, context_prompt: str) -> str:
+    async def process_query_with_ai(self, context_prompt: str, user_language: str = 'en') -> str:
         """Process query using available AI service"""
         # Check if fallback mode is forced
         if settings.FORCE_FALLBACK_MODE:
@@ -432,17 +444,31 @@ class VertexAIAgentService:
             return "I'm currently in fallback mode. Please check your receipt data manually or try again later when AI services are available."
         
         if self.use_generative_ai and GENERATIVE_AI_AVAILABLE:
-            return await self.process_query_with_generative_ai(context_prompt)
+            return await self.process_query_with_generative_ai(context_prompt, user_language)
         elif self.use_vertex_ai and VERTEX_AI_AVAILABLE:
             return await self.process_query_with_vertex_ai(context_prompt)
         else:
             logger.warning("⚠️ No AI service available, returning fallback response")
             return "I apologize, but I'm currently unable to process your request due to AI service limitations. Please try again later."
 
-    def _get_simple_fallback_response(self, query: str, receipts_data: List[Dict]) -> str:
+    def _get_simple_fallback_response(self, query: str, receipts_data: List[Dict], user_language: str = 'en') -> str:
         """Provide simple fallback responses based on receipt data without AI"""
         query_lower = query.lower()
         
+        # For non-English languages, provide simple responses
+        if user_language != 'en':
+            if any(word in query_lower for word in ['receipt', 'purchase', 'bought', 'spent']):
+                return "📊 Receipt data analysis is available in the 'My Receipts' section."
+            elif any(word in query_lower for word in ['shopping', 'buy', 'list', 'items']):
+                return "🛒 Shopping list features are available in the receipts section."
+            elif any(word in query_lower for word in ['cook', 'recipe', 'food', 'meal']):
+                return "👨‍🍳 Cooking suggestions are available when AI features are enabled."
+            elif any(word in query_lower for word in ['spending', 'budget', 'money', 'cost']):
+                return "💰 Spending analysis is available in the receipts section."
+            else:
+                return "🤖 AI features are temporarily unavailable. Please check your receipts manually."
+        
+        # English language responses
         # Basic receipt analysis
         if any(word in query_lower for word in ['receipt', 'purchase', 'bought', 'spent']):
             if receipts_data:
@@ -510,7 +536,7 @@ I'm currently in fallback mode due to API quota limits. Here's what you can do:
 
 💡 **Tip**: Try asking about "receipts", "shopping", "cooking", or "spending" for basic information!"""
 
-    async def process_query_with_generative_ai(self, context_prompt: str) -> str:
+    async def process_query_with_generative_ai(self, context_prompt: str, user_language: str = 'en') -> str:
         """Process query using Google Generative AI with enhanced Indian language support"""
         try:
             logger.info("🤖 Processing with Google Generative AI (with Indian language support)...")
@@ -526,19 +552,41 @@ I'm currently in fallback mode due to API quota limits. Here's what you can do:
                 candidate_count=1
             )
             
-            # Add system instruction for better Indian language handling
+            # Language-specific instructions with strict enforcement
+            language_instructions = {
+                'en': "IMPORTANT: You MUST respond ONLY in English. Do not use any other language.",
+                'hi': "महत्वपूर्ण: आपको केवल हिंदी में जवाब देना चाहिए। किसी अन्य भाषा का उपयोग न करें।",
+                'ta': "முக்கியம்: நீங்கள் தமிழில் மட்டுமே பதிலளிக்க வேண்டும். வேறு எந்த மொழியையும் பயன்படுத்த வேண்டாம்.",
+                'kn': "ಮುಖ್ಯ: ನೀವು ಕನ್ನಡದಲ್ಲಿ ಮಾತ್ರ ಉತ್ತರಿಸಬೇಕು. ಬೇರೆ ಯಾವುದೇ ಭಾಷೆಯನ್ನು ಬಳಸಬೇಡಿ.",
+                'te': "ముఖ్యమైనది: మీరు తెలుగులో మాత్రమే సమాధానం ఇవ్వాలి. వేరే ఏ భాషా నైనా ఉపయోగించవద్దు.",
+                'ml': "പ്രധാനം: നിങ്ങൾ മലയാളത്തിൽ മാത്രമേ ഉത്തരം നൽകണം. മറ്റ് ഏത് ഭാഷയും ഉപയോഗിക്കരുത്.",
+                'gu': "મહત્વપૂર્ણ: તમારે ફક્ત ગુજરાતીમાં જ જવાબ આપવો જોઈએ. કોઈપણ અન્ય ભાષાનો ઉપયોગ ન કરો.",
+                'mr': "महत्वाचे: तुम्ही फक्त मराठीतच उत्तर द्यावे. दुसरी कोणतीही भाषा वापरू नका.",
+                'bn': "গুরুত্বপূর্ণ: আপনাকে শুধুমাত্র বাংলায় উত্তর দিতে হবে। অন্য কোন ভাষা ব্যবহার করবেন না।",
+                'pa': "ਮਹੱਤਵਪੂਰਨ: ਤੁਹਾਨੂੰ ਸਿਰਫ ਪੰਜਾਬੀ ਵਿੱਚ ਹੀ ਜਵਾਬ ਦੇਣਾ ਚਾਹੀਦਾ ਹੈ। ਕੋਈ ਹੋਰ ਭਾਸ਼ਾ ਨਾ ਵਰਤੋ।"
+            }
+            
+            response_language = language_instructions.get(user_language, language_instructions['en'])
+            
+            # Add system instruction with strict language enforcement
             enhanced_prompt = f"""
 You are a helpful AI assistant specializing in Indian household management, cooking, and shopping. 
-You understand and can respond fluently in multiple Indian languages including Hindi, Tamil, Kannada, Telugu, Malayalam, Gujarati, Marathi, Bengali, and Punjabi.
 
-CRITICAL: Always respond in the SAME LANGUAGE as the user's query. Maintain the original script and cultural context.
+{response_language}
+
+IMPORTANT LANGUAGE RULES:
+- You MUST respond in the EXACT same language as the user's query
+- If the user asks in English, respond ONLY in English
+- If the user asks in Hindi, respond ONLY in Hindi
+- Do NOT mix languages or respond in a different language
+- Do NOT translate the user's language to another language
 
 {context_prompt}
 
-Additional Guidelines for Indian Language Responses:
-- Use appropriate honorifics and polite forms
-- Include traditional Indian cooking wisdom
-- Reference common Indian ingredients and spices
+Additional Guidelines:
+- Use appropriate honorifics and polite forms for the detected language
+- Include traditional Indian cooking wisdom when relevant
+- Reference common Indian ingredients and spices when appropriate
 - Consider regional cooking variations
 - Use metric measurements (kg, grams, liters)
 - Include cultural context in suggestions
@@ -551,6 +599,13 @@ Additional Guidelines for Indian Language Responses:
             
             if response.text:
                 logger.info("✅ Google Generative AI response received (with Indian language support)")
+                
+                # Validate that the response is in the correct language
+                detected_response_language = self.detect_language(response.text)
+                if detected_response_language != user_language and user_language == 'en':
+                    logger.warning(f"⚠️ AI responded in {detected_response_language} instead of {user_language}, providing English fallback")
+                    return f"Hello! I can help you with your receipt management and shopping needs. How can I assist you today?"
+                
                 return response.text
             else:
                 logger.warning("⚠️ Empty response from Google Generative AI")
@@ -726,12 +781,12 @@ Additional Guidelines for Indian Language Responses:
             context_prompt = await self.create_enhanced_context_prompt(english_query, receipts_data, query_type)
             
             # Process with available AI service
-            ai_response = await self.process_query_with_ai(context_prompt)
+            ai_response = await self.process_query_with_ai(context_prompt, detected_language)
             
             # Check if we got a quota exceeded response and use fallback
             if "quota" in ai_response.lower() and "exceeded" in ai_response.lower():
                 logger.info("🔄 Using simple fallback response due to quota limits")
-                ai_response = self._get_simple_fallback_response(request.query, receipts_data)
+                ai_response = self._get_simple_fallback_response(request.query, receipts_data, detected_language)
             
             # Extract actionable items
             actionable_items = self.extract_actionable_items(ai_response, query_type)
